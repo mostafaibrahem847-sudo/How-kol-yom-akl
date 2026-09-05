@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Audio } from 'expo-av';
+import { createAudioPlayer } from 'expo-audio';
+import type { AudioPlayer } from 'expo-audio';
 
 export type PlayState = 'idle' | 'loading' | 'playing' | 'paused';
 
@@ -10,116 +11,126 @@ export interface AudioPlayerHook {
   replay: () => Promise<void>;
   play: () => Promise<void>;
   pause: () => Promise<void>;
-  sound: Audio.Sound | null;
+  sound: AudioPlayer | null;
   duration: number;
   position: number;
 }
 
 export function useAudioPlayerHook(audioUrl?: string | null): AudioPlayerHook {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [player, setPlayer] = useState<AudioPlayer | null>(null);
   const [state, setState] = useState<PlayState>('idle');
   const [duration, setDuration] = useState(0);
   const [position, setPosition] = useState(0);
 
+  // Cleanup on unmount or player change
   useEffect(() => {
     return () => {
-      if (sound) {
-        sound.unloadAsync().catch(() => {});
+      if (player) {
+        try { player.remove(); } catch {}
       }
     };
-  }, [sound]);
+  }, [player]);
 
-  const loadSound = useCallback(async () => {
+  // Load / reload when audioUrl changes
+  useEffect(() => {
     if (!audioUrl) {
-      setSound(null);
+      if (player) {
+        try { player.remove(); } catch {}
+        setPlayer(null);
+      }
       setState('idle');
+      setDuration(0);
+      setPosition(0);
       return;
     }
-    try {
-      setState('loading');
-      // Unload previous
-      if (sound) {
-        await sound.unloadAsync();
+
+    setState('loading');
+    setDuration(0);
+    setPosition(0);
+
+    const newPlayer = createAudioPlayer({ uri: audioUrl }, { updateInterval: 500 });
+    setPlayer(newPlayer);
+
+    // Give loader a moment to finish; if it fails, fall back to idle
+    const timeout = setTimeout(() => {
+      if (!newPlayer.isLoaded) {
+        // still loading or failed — stay loading until update
       }
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUrl },
-        { shouldPlay: false, progressUpdateIntervalMillis: 500 }
-      );
-      newSound.setOnPlaybackStatusUpdate((status: any) => {
-        if (!status.isLoaded) {
-          if (status.error) {
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [audioUrl]);
+
+  // Poll status from the player instance so state stays in sync
+  useEffect(() => {
+    if (!player) return;
+
+    const tick = () => {
+      try {
+        if (player.isLoaded) {
+          setDuration(Math.round((player.duration ?? 0) * 1000));
+          setPosition(Math.round((player.currentTime ?? 0) * 1000));
+
+          if (player.paused || (!player.playing && player.currentTime >= player.duration - 0.1)) {
+            if (player.currentTime >= player.duration - 0.1 && player.duration > 0) {
+              setState('idle');
+              setPosition(0);
+            } else {
+              setState('paused');
+            }
+          } else if (player.playing) {
+            setState('playing');
+          } else {
             setState('idle');
           }
-          return;
-        }
-        if (status.durationMillis != null) {
-          setDuration(status.durationMillis);
-        }
-        if (status.positionMillis != null) {
-          setPosition(status.positionMillis);
-        }
-        if (status.didJustFinish) {
-          setState('idle');
-          setPosition(0);
-        } else if (status.isPlaying) {
-          setState('playing');
         } else {
-          setState('paused');
+          setState('loading');
         }
-      });
-      setSound(newSound);
-    } catch {
-      setState('idle');
-    }
-  }, [audioUrl]);
+      } catch {}
+    };
 
-  useEffect(() => {
-    loadSound();
-  }, [audioUrl]);
+    tick();
+    const id = setInterval(tick, 500);
+    return () => clearInterval(id);
+  }, [player]);
 
   const togglePlay = useCallback(async () => {
-    if (!audioUrl || !sound) return;
-    const status = await sound.getStatusAsync();
-    if (!status.isLoaded) return;
-    if (status.isPlaying) {
-      await sound.pauseAsync();
-      setState('paused');
-    } else {
-      await sound.playAsync();
-      setState('playing');
-    }
-  }, [sound, audioUrl]);
+    if (!audioUrl || !player) return;
+    try {
+      if (player.playing) {
+        player.pause();
+        setState('paused');
+      } else {
+        player.play();
+        setState('playing');
+      }
+    } catch {}
+  }, [audioUrl, player]);
 
   const replay = useCallback(async () => {
-    if (!sound) return;
+    if (!player) return;
     try {
-      await sound.setPositionAsync(0);
-      await sound.playAsync();
+      await player.seekTo(0);
+      player.play();
       setState('playing');
-    } catch {
-      // ignore
-    }
-  }, [sound]);
+    } catch {}
+  }, [player]);
 
   const play = useCallback(async () => {
-    if (!sound) return;
+    if (!player) return;
     try {
-      await sound.playAsync();
+      player.play();
       setState('playing');
-    } catch {
-      // ignore
-    }
-  }, [sound]);
+    } catch {}
+  }, [player]);
 
   const pause = useCallback(async () => {
-    if (!sound) return;
+    if (!player) return;
     try {
-      await sound.pauseAsync();
+      player.pause();
       setState('paused');
-    } catch {
-      // ignore
-    }
-  }, [sound]);
+    } catch {}
+  }, [player]);
 
   return {
     state,
@@ -128,7 +139,7 @@ export function useAudioPlayerHook(audioUrl?: string | null): AudioPlayerHook {
     replay,
     play,
     pause,
-    sound,
+    sound: player,
     duration,
     position,
   };
