@@ -1,39 +1,17 @@
-Task: Fix runtime error "Cannot find native module 'ExponentAV'" in D:/مواقع وهمية/هو كل يوم اكل.
+Task: Fix Supabase error "column recipes.audio_url does not exist" in D:/مواقع وهمية/هو كل يوم اكل.
 
-Problem: Project uses Expo SDK 57 which replaced deprecated `expo-av` with `expo-audio`. The `expo-av` native module no longer exists.
+State:
+- query `useRecipes` selects `audio_url` from `recipes`
+- Live Supabase schema (supabase-schema.sql): recipes table has NO `audio_url` column; audio data lives in separate `audio_urls` (recipe_id, url) table
+- Local schema.sql defines `audio_url` but that's not the live DB
+- `useRecipe()` correctly queries `audio_urls` separately; only `useRecipes` is wrong
 
-Current state:
-- package.json: "expo": "^57.0.0", "expo-av": "^16.0.8"
-- src/hooks/useAudioPlayer.ts imports Audio from 'expo-av' and uses Audio.Sound.createAsync(), Audio.Sound, sound.unloadAsync(), sound.getStatusAsync(), sound.setPositionAsync(), sound.playAsync(), sound.pauseAsync()
+Goal: Make `useRecipes()` work with actual DB, without creating duplicate audio columns.
 
-Goal: Migrate from expo-av to expo-audio (Expo SDK 57 native replacement).
+Instruction: DO NOT add `audio_url` to the recipes table. Instead, update `src/data/queries.ts` `useRecipes()` so it doesn't select `audio_url` from `recipes` (remove from select string). The recipe card UI uses `audioAvailable` (boolean) to show the voice CTA; the URL comes from `useRecipe` (detail) only. If `audioUrl` must be available at list level for some reason, join `audio_urls` in the query, but the safer fix is to simply drop `audio_url` from the list query and rely on `audio_available`.
 
-Steps:
-1. Run `npx expo install expo-audio` to install the correct package (replaces expo-av).
-2. Uninstall `expo-av`: `npm uninstall expo-av`.
-3. Update src/hooks/useAudioPlayer.ts:
-   - Change `import { Audio } from 'expo-av'` to `import { Audio } from 'expo-audio'`
-   - The API is nearly identical: Audio.Sound.createAsync, unloadAsync, getStatusAsync, setPositionAsync, playAsync, pauseAsync still exist but may have minor signature changes. Check expo-audio docs or look at the installed package API.
-   - The return shape of createAsync may differ — adjust type accordingly.
-4. Run `npx expo-doctor` and fix any remaining issues it reports.
-5. Run `npx tsc --noEmit` and fix any TypeScript errors.
-6. Restart expo: `npx expo start --clear` and verify the app loads without the ExponentAV error.
+Also check `searchRecipes()` — if it selects `audio_url`, remove too.
 
-DO NOT:
-- Downgrade Expo SDK.
-- Change any screens, UI, navigation, supabase config, i18n, or recipe data.
-- Add mocks or workarounds.
-- Touch anything outside: package.json, useAudioPlayer.ts, and anything expo-doctor fixes as related.
+DO NOT change screens, DB migrations, or recipe data. Just fix the query.
 
-Gate commands:
-- `npx expo-doctor`
-- `npx tsc --noEmit`
-- `npx expo start --clear` (verify no ExponentAV error in output)
-
-Report contract:
-- Files changed (list with line ranges).
-- Any new packages installed/uninstalled.
-- tsc exit code.
-- expo-doctor output summary.
-- Whether the ExponentAV error is gone.
-- DO NOT commit.
+Validation: `npx tsc --noEmit` passes; no 42703 error.

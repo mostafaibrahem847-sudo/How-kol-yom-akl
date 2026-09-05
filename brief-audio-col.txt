@@ -1,0 +1,7 @@
+TASK: Fix "column recipes.audio_url does not exist"
+
+State: queries.ts selects audio_url from recipes. supabase-schema.sql has no audio_url column (only audio_available boolean + separate audio_urls table). Do NOT add column to recipes.
+
+Fix: Remove audio_url from the .select() string in useRecipes() and searchRecipes(). Keep audio_available. Verify with tsc.
+
+DO NOT touch DB migrations, screens, recipes data. Only queries.ts.

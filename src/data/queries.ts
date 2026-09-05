@@ -28,7 +28,7 @@ export const useRecipes = () =>
       const { data, error } = await supabase
         .from('recipes')
         .select(
-          'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, audio_url, occasion, category_color'
+          'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color'
         );
 
       if (error) {
@@ -87,7 +87,7 @@ export async function searchRecipes(query: string): Promise<Recipe[]> {
   const pattern = `%${escaped}%`;
 
   const cols =
-    'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color, audio_url';
+    'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color';
 
   // Parameterized per-column ILIKE filters (no user string interpolated into a
   // raw .or() filter). Three parallel queries keep OR semantics: title matches
