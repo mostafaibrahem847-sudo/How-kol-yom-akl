@@ -1,0 +1,48 @@
+{
+  "name": "howa-kol-yom-akl",
+  "main": "index.js",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@react-navigation/bottom-tabs": "^6.6.1",
+    "@react-navigation/native": "^6.1.18",
+    "@react-navigation/native-stack": "^6.11.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "@tanstack/react-query": "^5.59.0",
+    "expo": "^57.0.0",
+    "expo-asset": "~57.0.0",
+    "expo-audio": "~57.0.4",
+    "expo-av": "^16.0.8",
+    "expo-constants": "~57.0.17",
+    "expo-font": "~57.0.3",
+    "expo-linking": "~57.0.9",
+    "expo-splash-screen": "~57.0.8",
+    "expo-status-bar": "~57.0.1",
+    "react": "19.2.3",
+    "react-native": "0.86.3",
+    "react-native-gesture-handler": "~2.32.0",
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-screens": "~4.26.0",
+    "zustand": "^4.5.5"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.24.0",
+    "@types/react": "~19.2.4",
+    "babel-preset-expo": "~57.0.0",
+    "typescript": "~6.0.3"
+  },
+  "private": true,
+  "expo": {
+    "doctor": {
+      "reactNativeDirectoryCheck": {
+        "exclude": []
+      }
+    }
+  }
+}

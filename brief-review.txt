@@ -1,0 +1,24 @@
+Read-only review (no edits). Implementer review only.
+
+Task: Verify the 3 fixes another agent just applied in D:/مواقع وهمية/هو كل يوم اكل.
+
+Files to inspect (read them fully):
+1. src/db/seed.sql — should now contain ingredients/steps/tips for all 10 recipes (okra + 9 others: molokhia, kofta, bechamel, oxtail, koshary, potatoChicken, omAli, chickenPotato, hawawshi).
+2. src/screens/RecipeDetailScreen.tsx — paused voice state: buttonBg must be colors.white, iconColor colors.primary (per design.md Paused: #FFFFFF bg, #D35400 icon).
+3. src/data/queries.ts — searchRecipes() must use parameterized .ilike() per column with LIKE-wildcard escaping, NOT raw .or() interpolation.
+
+For each of the 3, judge:
+- Correctness: does the fix actually solve the original bug?
+- Side effects: any regressions, broken imports, unused vars, type errors?
+- Scope creep: did the implementer touch anything it shouldn't have?
+
+Also flag any of these I asked to LEAVE untouched (schema, supabase config, audio hooks, navigation, i18n, other screens) that were changed.
+
+Run `npx tsc --noEmit` and report exit code.
+Spot-check seed.sql: count ingredients/steps/tips blocks per recipe; flag any duplicate ids or missing recipe_ids; verify sort_order is sequential within each recipe.
+
+Report contract:
+- Per file: PASS or list of issues (file:line + concrete problem)
+- Overall: ship as-is, needs-tweak, or rollback
+- tsc exit code
+- DO NOT edit any files.

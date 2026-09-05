@@ -1,0 +1,28 @@
+{
+  "expo": {
+    "name": "هو كل يوم أكل",
+    "slug": "howa-kol-yom-akl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FDFBF7"
+      }
+    },
+    "plugins": [
+      "expo-audio",
+      "expo-asset"
+    ],
+    "extra": {
+      "supabaseUrl": "https://lawoormzqfeyafjrptwc.supabase.co",
+      "supabaseAnonKey": "sb_publishable_hmUpy67-fc1dlFXICZ2Scw_9M7k12lq"
+    }
+  }
+}

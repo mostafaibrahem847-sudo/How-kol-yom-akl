@@ -1,0 +1,14 @@
+Task: Fix 3 verified issues in the Arabic recipe app (D:/مواقع وهمية/هو كل يوم اكل).
+
+Verified state from previous review (Codex session 01a07100-2736):
+- queries.ts: useRecipe() has multi-table query; seed parity broken.
+- RecipeDetailScreen.tsx line ~92-93: paused state sets buttonBg=primary + iconColor=primary → invisible icon.
+- queries.ts:89 .ilike() does raw interpolation (filter-injection risk).
+
+Changes required (do NOT commit; do NOT change anything else):
+1. SEED PARITY (critical): src/db/seed.sql has recipes for 10 items but only 'okra' has ingredients/steps/tips. Add ingredients/steps/tips for the other 9 recipes (molokhia, kofta, bechamel, oxtail, koshary, potatoChicken, omAli, chickenPotato, hawawshi). Keep same format: 'recipe_id' references, id prefixes, text/body in Arabic, sort_order for steps, on-conflict do nothing.
+2. INVISIBLE BUTTON (critical): RecipeDetailScreen.tsx VoicePlayerDock. Fix so when state==='paused': buttonBg = colors.white, iconColor = colors.primary (matches design.md comment: Paused #FFFFFF bg, #D35400 icon). Currently both = primary.
+3. SANITIZE .ilike() (serious): src/data/queries.ts searchRecipes(). Escape % and _ in trimmed query, or use parameterized approach; do not interpolate user string into .or() raw.
+
+Leave untouched: schema, supabase config, audio hooks, navigation, i18n, all other screens.
+Report back: which files edited, line ranges, and any issues found.

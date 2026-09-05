@@ -1,0 +1,33 @@
+# Debate / adversarial review — Phase 6 & Phase 7 of implementaion.md
+
+## Your role
+Read the codebase. Act as a critical, adversarial reviewer. Identify real bugs, design mismatches with `design.md`, missing guard conditions, or scope mistakes. Be precise — name file + line. If something is fine, say so briefly. Do NOT edit files (read-only).
+
+## What to review
+
+### Phase 6 — Voice / Audio Pipeline (already done)
+- `src/hooks/useAudioPlayer.ts` — uses `expo-av` `Audio.Sound` with `AudioPlayerHook`. Check: does it properly unload? Is `loadSound` called every URL change? Does it handle null URL gracefully?
+- `src/screens/RecipeDetailScreen.tsx` — `VoicePlayerDock`. Check: does the design.md voice icon rules match? (Resting: `#D35400` bg + white icon; Playing: `#FDFBF7` cream + glow + white icon; Paused: `#FFFFFF` bg + `#D35400` icon). Are replay/pause/play mapped correctly?
+- `src/data/recipes.ts` — 6 recipes got `audioUrl` placeholders (soundhelix URLs). Check: are these URLs realistic? Should they be real ElevenLabs URLs? Is `audioAvailable` in sync with the URL presence?
+- `src/types/recipe.ts` — `audioUrl?: string` on `Recipe`. Is this the right type placement?
+
+### Phase 7 — Supabase Integration + Polish (just done via delegation)
+- `src/db/schema.sql` — check table design. `recipes.id` is `TEXT PRIMARY KEY` (matches app IDs). `ingredients`, `steps`, `tips`, `audio_urls` all reference `recipes(id)`. Are indexes correct? `to_tsvector('simple', title)` — is `'simple'` appropriate for Arabic? Should it be `'arabic'`?
+- `src/db/seed.sql` — check data. Does the seed include all 10 recipes? Does it include `audio_url` values only for recipes with `audio_available: true`? Check for syntax errors.
+- `src/lib/supabase.ts` — check env var references (`process.env.SUPABASE_URL`, `SUPABASE_ANON_KEY`). Is there a hard-coded fallback URL? Should `.env` be required?
+- `src/data/queries.ts` — `useRecipe(id)` queries `audio_urls` separately (`audio_urls` table) then falls back to `audioUrl` on recipe. Does `searchRecipes(query)` use `.ilike()` correctly? Does it select `audio_url` in the select list? Check for SQL injection risk in `.ilike()` interpolation.
+- Polish pass findings (read-only audit): touch targets (`checkbox 24dp`, `stepNumber 36dp` below 44dp), RTL (`slide_from_right` animation wrong for RTL), contrast.
+
+### Design.md compliance
+- Every new component/style must match `design.md`: colors (`#D35400`, `#FDFBF7`, `#556B2F`), spacing (4, 8, 12, 16, 24, 32, 48dp), typography (`Cairo` font loaded via `expo-font`), radius (`12dp` medium).
+- Voice dock: is the glow effect implemented? Is the icon using the right colors per state?
+
+## Report contract (your final message should cover these)
+1. Real bugs (file + line + fix needed) — ranked critical / serious / minor.
+2. Design.md mismatches (any new component/style that breaks spec).
+3. Phase 6 assessment: is the audio hook production-ready? What is missing before real ElevenLabs URLs?
+4. Phase 7 assessment: is the DB schema sound? Is the seed data complete? Is the `.ilike()` search safe? What should be cleaned before production?
+5. Any leftover artifacts that should be removed (e.g., duplicate `supabase-schema.sql`, `supabase-full-setup.sql`).
+6. Final verdict: is the project in a good state after these two phases? What is the single highest-priority fix?
+
+Do NOT edit. Do NOT commit. Just debate and report.

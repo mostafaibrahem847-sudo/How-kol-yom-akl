@@ -1,0 +1,28 @@
+# Phase 7 — Supabase Integration + Polish (delegate brief)
+
+## Goal
+Move the recipe app from placeholder array data (`src/data/recipes.ts`) to real Supabase database integration, update TanStack Query hooks to call Supabase, and run a final polish pass (contrast, RTL, touch targets).
+
+## What to change
+1. Create `src/db/schema.sql` — table definitions: `recipes`, `ingredients`, `steps`, `tips`, `audio_urls`. Match fields from `src/types/recipe.ts`.
+2. Create `src/db/seed.sql` — batch INSERT of the 10 recipes from `src/data/recipes.ts` into those tables.
+3. Update `src/lib/supabase.ts` — wire `createClient` using `SUPABASE_URL` + `SUPABASE_ANON_KEY` from `.env`.
+4. Update `src/data/queries.ts` (`useRecipes`, `useRecipe`) to call Supabase instead of the placeholder array. Use `.select()` and `.eq()`; add `.ilike()` for Arabic text search.
+5. Add `searchRecipes(query: string)` to `queries.ts`.
+6. Polish pass: verify touch targets ≥44dp, contrast (`#D35400` on `#FDFBF7`/white), RTL mirroring (back arrows, tab bar, voice dock).
+
+## What to leave untouched
+Screens (`src/screens/*`), components (`RecipeCard`, `CategoryChip`), hooks (`useAudioPlayer`), theme (`src/theme/*`), i18n (`src/i18n/*`), navigation. Do not modify `RecipeDetailScreen.tsx` or `App.tsx` unless the DB refactor forces a type change.
+
+## Gate command (must pass)
+`npx tsc --noEmit`
+
+## Report contract
+- List all files touched.
+- Confirm `tsc --noEmit` result (clean / errors with line refs).
+- Confirm `audioUrl` field is preserved on `RecipeDetail` type.
+- Confirm no accidental removal of `expo-av` import or `useAudioPlayerHook` from Phase 6.
+- Confirm `.env` variables (`SUPABASE_URL`, `SUPABASE_ANON_KEY`) are referenced, not hard-coded.
+
+## Authorization
+**Agent: build** (write-capable, headless). **Do NOT commit.** The orchestrator (me) will review the diff and land.
