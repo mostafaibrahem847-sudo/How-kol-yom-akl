@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Feather from '@expo/vector-icons/Feather';
@@ -32,6 +32,12 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
   const isHero = variant === 'hero';
   const isFavorite = useFavorites((s) => s.favorites.has(recipe.id));
   const toggleFavorite = useFavorites((s) => s.toggle);
+
+  // Responsive scale: the default card sits in a ~half-screen grid column. On
+  // narrow phones every measure stays compact; once the content half gets real
+  // width (larger phones / tablet / web) the card steps up to the roomier scale
+  // and the difficulty label is shown beside the time (it only fits then).
+  const [roomy, setRoomy] = useState(false);
 
   if (isHero) {
     return (
@@ -111,9 +117,12 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
       style={[styles.card, styles.cardDefault]}
     >
       {/*
-        Balanced 50/50 row. The app is RTL-only: in a flexDirection:'row'
-        container the FIRST child (the image) is laid out on the RIGHT half and
-        the content follows on the LEFT half — no row-reverse needed.
+        Balanced 50/50 row, compact-scaled for a ~half-screen grid column. The
+        app is RTL-only: in a flexDirection:'row' container the FIRST child
+        (the image) is laid out on the RIGHT half and the content follows on
+        the LEFT half — no row-reverse needed. Everything inside is scaled
+        down from the wide standalone concept so it reads as a deliberately
+        compact card rather than a squeezed desktop card.
       */}
       <View style={styles.cardRow}>
         {/* IMAGE half — physically the right half of the card */}
@@ -141,7 +150,7 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
           >
             <MaterialCommunityIcons
               name={isFavorite ? 'heart' : 'heart-outline'}
-              size={20}
+              size={roomy ? 18 : 16}
               color={colors.primary}
             />
           </TouchableOpacity>
@@ -149,28 +158,34 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
           {/* Audio indicator */}
           {recipe.audioAvailable && (
             <View style={styles.audioBadgeSmall} pointerEvents="none">
-              <MaterialCommunityIcons name="microphone" size={11} color={colors.white} />
+              <MaterialCommunityIcons name="microphone" size={10} color={colors.white} />
             </View>
           )}
         </View>
 
         {/* CONTENT half — physically the left half of the card */}
-        <View style={styles.contentHalf}>
+          <View
+            style={[styles.contentHalf, roomy && styles.contentHalfRoomy]}
+            onLayout={(e) => setRoomy(e.nativeEvent.layout.width >= 120)}
+          >
           <View style={styles.chipClip}>
             <CategoryChip label={recipe.category} color={recipe.categoryColor ?? 'olive'} small />
           </View>
 
-          <Text style={styles.cardTitle} numberOfLines={2}>
+          <Text style={[styles.cardTitle, roomy && styles.cardTitleRoomy]} numberOfLines={2}>
             {recipe.title}
           </Text>
 
+          {/* Time + (when it fits) difficulty — always a single clean line. */}
           <View style={styles.metaRow}>
-            <Feather name="clock" size={11} color={colors.neutralMuted} />
-            <Text style={styles.metaText}>{toArabicNumerals(recipe.minutes)} {t.common.minutes}</Text>
-            {recipe.difficulty ? (
+            <Feather name="clock" size={roomy ? 11 : 10} color={colors.neutralMuted} />
+            <Text style={[styles.metaText, roomy && styles.metaTextRoomy]} numberOfLines={1}>
+              {toArabicNumerals(recipe.minutes)} {t.common.minutes}
+            </Text>
+            {roomy && recipe.difficulty ? (
               <>
                 <Text style={styles.metaDot}>·</Text>
-                <Text style={[styles.metaText, styles.metaTextShrink]} numberOfLines={1}>
+                <Text style={[styles.metaDifficulty, roomy && styles.metaTextRoomy]} numberOfLines={1}>
                   {recipe.difficulty}
                 </Text>
               </>
@@ -178,7 +193,7 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
           </View>
 
           {recipe.description ? (
-            <Text style={styles.cardDesc} numberOfLines={2}>
+            <Text style={[styles.cardDesc, roomy && styles.cardDescRoomy]} numberOfLines={1}>
               {recipe.description}
             </Text>
           ) : null}
@@ -187,10 +202,11 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
 
           <TouchableOpacity
             onPress={onPress}
-            style={styles.ctaCompact}
+            style={[styles.ctaCompact, roomy && styles.ctaCompactRoomy]}
             activeOpacity={0.8}
+            hitSlop={{ top: 4, bottom: 4, left: 0, right: 0 }}
           >
-            <Text style={styles.ctaCompactText}>{t.recipeCard.cook}</Text>
+            <Text style={[styles.ctaCompactText, roomy && styles.ctaTextRoomy]}>{t.recipeCard.cook}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -250,12 +266,12 @@ const styles = StyleSheet.create({
   },
   favBtn: {
     position: 'absolute',
-    top: spacing.sm,
-    left: spacing.sm,
-    width: 36,
-    height: 36,
+    top: spacing.xs,
+    left: spacing.xs,
+    width: 28,
+    height: 28,
     borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.88)',
+    backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
     justifyContent: 'center',
     // No white-alpha token exists, so the translucent white is hard-coded to
@@ -263,65 +279,100 @@ const styles = StyleSheet.create({
   },
   audioBadgeSmall: {
     position: 'absolute',
-    bottom: spacing.sm,
-    right: spacing.sm,
-    width: 22,
-    height: 22,
+    bottom: spacing.xs,
+    right: spacing.xs,
+    width: 18,
+    height: 18,
     borderRadius: radius.full,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // Compact-card scaling: the default card renders inside a ~half-screen grid
+  // column, so every internal measure is proportionally reduced relative to
+  // the wide standalone concept. Micro values (2–6px) intentionally sit below
+  // the 4/8/12 spacing tokens — at this width token gaps would look oversized.
   contentHalf: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
   },
   chipClip: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
     overflow: 'hidden',
-    borderRadius: radius.small,
-    marginBottom: spacing.xs,
+    borderRadius: 4,
+    marginBottom: 2,
   },
   cardTitle: {
     fontFamily,
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: fontWeight.bold,
     color: colors.neutralDark,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginBottom: spacing.xs,
+    gap: 3,
+    marginBottom: 2,
   },
-  metaText: { ...typography.bodySmall, color: colors.neutralMuted },
-  metaTextShrink: { flexShrink: 1 },
-  metaDot: { ...typography.bodySmall, color: colors.neutralLight },
-  cardDesc: {
-    ...typography.bodySmall,
+  metaText: {
+    fontFamily,
+    fontSize: 11,
+    lineHeight: 15,
     color: colors.neutralMuted,
     flexShrink: 1,
   },
-  spacer: { flex: 1, minHeight: spacing.xs },
+  metaDot: {
+    fontFamily,
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.neutralLight,
+    marginHorizontal: 3,
+  },
+  metaDifficulty: {
+    fontFamily,
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.neutralMuted,
+    flexShrink: 1,
+  },
+  cardDesc: {
+    fontFamily,
+    fontSize: 11,
+    lineHeight: 15,
+    color: colors.neutralMuted,
+    flexShrink: 1,
+    marginBottom: 5,
+  },
+  spacer: { flex: 1, minHeight: 0 },
   ctaCompact: {
-    height: 34,
+    height: 30,
     backgroundColor: colors.primary,
-    borderRadius: radius.small,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
   ctaCompactText: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 16,
     fontWeight: fontWeight.bold,
     color: colors.white,
   },
+
+  // ---- roomier scale (larger phones / tablet / web columns) ----
+  // Applied as array overrides on top of the compact styles once the content
+  // half measures >= 120px wide, so proportions stay balanced at both sizes.
+  contentHalfRoomy: { paddingHorizontal: 10, paddingVertical: 9 },
+  cardTitleRoomy: { fontSize: 15, lineHeight: 22 },
+  metaTextRoomy: { fontSize: 12, lineHeight: 17 },
+  cardDescRoomy: { fontSize: 12, lineHeight: 17 },
+  ctaCompactRoomy: { height: 36, borderRadius: 8 },
+  ctaTextRoomy: { fontSize: 13, lineHeight: 18 },
 
   // ---------- hero (unchanged vertical layout) ----------
   imageWrap: {
