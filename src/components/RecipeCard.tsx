@@ -6,8 +6,7 @@ import CategoryChip from './CategoryChip';
 import { toArabicNumerals } from '../i18n/numerals';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = Math.min(width - spacing.lg * 2, 280);
-const IMAGE_HEIGHT = CARD_WIDTH * (3 / 4); // 4:3
+const CARD_MAX_WIDTH = Math.min(width - spacing.lg * 2, 280);
 
 type Props = {
   recipe: Recipe;
@@ -83,15 +82,6 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
             <Text style={styles.ctaText}>شوفي الوصفة</Text>
           </TouchableOpacity>
 
-          {recipe.audioAvailable && onVoicePress && (
-            <TouchableOpacity
-              onPress={onVoicePress}
-              style={styles.voiceBtn}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.voiceText}>🎙️</Text>
-            </TouchableOpacity>
-          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -100,24 +90,30 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
 
 const styles = StyleSheet.create({
   card: {
-    width: CARD_WIDTH,
+    width: '100%',
     backgroundColor: colors.white,
     borderRadius: 12,
-    overflow: 'hidden',
     ...elevation.cardResting,
     marginBottom: spacing.md,
   },
   heroCard: {
     width: '100%',
-    maxWidth: CARD_WIDTH,
+    maxWidth: CARD_MAX_WIDTH,
   },
   imageWrap: {
     width: '100%',
-    height: IMAGE_HEIGHT,
+    aspectRatio: 4 / 3,
     backgroundColor: colors.neutralSurface,
+    // Clip the full-bleed image to the card's rounded top corners here
+    // instead of putting overflow:'hidden' on the card itself: an Android
+    // elevation shadow is clipped when the shadowed view also clips its
+    // children, which made card shadows missing on Android/iOS vs Web.
+    overflow: 'hidden',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   heroImageWrap: {
-    height: IMAGE_HEIGHT + 40,
+    aspectRatio: 4 / 3,
   },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: {
@@ -165,7 +161,7 @@ const styles = StyleSheet.create({
   infoRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   infoText: { ...typography.bodySmall, color: colors.neutralMuted },
   infoDot: { ...typography.bodySmall, color: colors.neutralLight, marginHorizontal: spacing.xs },
-  ctaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  ctaRow: { flexDirection: 'row', alignItems: 'center' },
   ctaBtn: {
     flex: 1,
     height: buttonSize.height,
@@ -175,15 +171,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   ctaText: { ...typography.button, color: colors.white },
-  voiceBtn: {
-    width: buttonSize.height,
-    height: buttonSize.height,
-    backgroundColor: colors.neutralSurface,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  voiceText: { fontSize: 18 },
 });

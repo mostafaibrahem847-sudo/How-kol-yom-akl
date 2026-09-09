@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
@@ -9,7 +10,7 @@ import { colors } from '../theme';
 
 const queryClient = new QueryClient();
 
-export default function App() {
+function AppContent() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
 
   useEffect(() => {
@@ -36,4 +37,20 @@ export default function App() {
       </SafeAreaProvider>
     </QueryClientProvider>
   );
+}
+
+export default function App() {
+  // react-native-web does not mirror layout through I18nManager. Setting
+  // dir="rtl" on the web root makes react-native-web flip flex rows AND
+  // localize physical left/right styles (via its locale context), which is
+  // what the native engine does automatically when I18nManager.isRTL=true.
+  // The prop is a react-native-web DOM prop; native ignores it entirely.
+  if (Platform.OS === 'web') {
+    return (
+      <View {...({ dir: 'rtl' } as object)} style={{ flex: 1 }}>
+        <AppContent />
+      </View>
+    );
+  }
+  return <AppContent />;
 }

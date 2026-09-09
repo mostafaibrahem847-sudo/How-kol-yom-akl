@@ -2,13 +2,13 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, typography, buttonSize } from '../theme';
+import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { placeholderRecipes } from '../data/recipes';
 import { toArabicNumerals } from '../i18n/numerals';
 import RecipeCard from '../components/RecipeCard';
+import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
 
 export default function SearchScreen() {
@@ -21,8 +21,8 @@ export default function SearchScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={styles.root}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <Text style={styles.pageTitle}>{t.nav.search}</Text>
 
@@ -88,13 +88,30 @@ export default function SearchScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Fixed top header overlay */}
+      <View style={styles.fixedHeader}>
+        <AppHeader indicator={t.nav.search} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.secondary },
-  scroll: { paddingHorizontal: screenPadding.horizontal, paddingVertical: spacing.xl, paddingBottom: 100 },
+  scrollView: { flex: 1 },
+  scroll: {
+    paddingHorizontal: screenPadding.horizontal,
+    paddingTop: headerHeight + spacing.md,
+    paddingBottom: 100,
+  },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
   pageTitle: { ...typography.h1, color: colors.neutralDark, marginBottom: spacing.md },
   searchRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md },
   input: {

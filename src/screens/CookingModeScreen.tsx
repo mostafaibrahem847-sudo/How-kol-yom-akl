@@ -40,7 +40,10 @@ export default function CookingModeScreen() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.root} edges={['top', 'bottom', 'left', 'right']}>
+      {/* The App-level SafeAreaView already insets top/left/right for the whole
+          navigator; here we only add the bottom inset so this fullscreen screen
+          doesn't double-pad the top/left/right edges on Android. */}
+      <SafeAreaView style={styles.root} edges={['bottom']}>
         <StatusBar barStyle="dark-content" backgroundColor={colors.secondary} />
 
       {/* Progress bar */}

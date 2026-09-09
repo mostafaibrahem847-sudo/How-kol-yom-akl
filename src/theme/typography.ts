@@ -26,13 +26,13 @@ export const typography = {
   } as TextStyle,
   h1Mobile: {
     fontFamily,
-    fontSize: 30,
+    fontSize: 20,
     lineHeight: 38,
     fontWeight: fontWeight.bold,
   } as TextStyle,
   h2: {
     fontFamily,
-    fontSize: 28,
+    fontSize: 17,
     lineHeight: 34,
     fontWeight: fontWeight.semibold,
   } as TextStyle,
@@ -44,7 +44,7 @@ export const typography = {
   } as TextStyle,
   headlineMd: {
     fontFamily,
-    fontSize: 26,
+    fontSize: 12,
     lineHeight: 34,
     fontWeight: fontWeight.semibold,
   } as TextStyle,
@@ -98,7 +98,7 @@ export const typography = {
   } as TextStyle,
   button: {
     fontFamily,
-    fontSize: 13,
+    fontSize: 15,
     lineHeight: 18,
     fontWeight: fontWeight.semibold,
   } as TextStyle,

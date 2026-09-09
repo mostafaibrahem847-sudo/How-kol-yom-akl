@@ -1,20 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import Feather from '@expo/vector-icons/Feather';
 import { colors, spacing, typography, buttonSize } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
 import { toArabicNumerals } from '../i18n/numerals';
 
-const SettingRow = ({ icon, label, note }: { icon: string; label: string; note?: string }) => (
+type FeatherName = keyof typeof Feather.glyphMap;
+
+const SettingRow = ({ icon, label, note }: { icon: FeatherName; label: string; note?: string }) => (
   <TouchableOpacity style={styles.settingRow} activeOpacity={0.8}>
-    <Text style={styles.settingIcon}>{icon}</Text>
+    <Feather name={icon} size={20} color={colors.neutralMuted} style={styles.settingIcon} />
     <View style={styles.settingContent}>
       <Text style={styles.settingLabel}>{label}</Text>
       {note && <Text style={styles.settingNote}>{note}</Text>}
     </View>
-    <Text style={styles.settingArrow}>←</Text>
+    <Feather name="chevron-left" size={20} color={colors.neutralLight} style={styles.settingArrow} />
   </TouchableOpacity>
 );
 
@@ -22,7 +24,7 @@ export default function ProfileScreen() {
   const { favorites } = useFavorites();
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
+    <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Profile header */}
         <View style={styles.header}>
@@ -36,19 +38,19 @@ export default function ProfileScreen() {
         {/* Stats card */}
         <View style={styles.statsCard}>
           <View style={styles.statRow}>
-            <Text style={styles.statIcon}>❤️</Text>
+            <Feather name="heart" size={18} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statLabel}>الوصفات المفضلة</Text>
             <Text style={styles.statValue}>{toArabicNumerals(favorites.size)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.statRow}>
-            <Text style={styles.statIcon}>✅</Text>
+            <Feather name="check-circle" size={18} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statLabel}>أكلات مجربة</Text>
             <Text style={styles.statValue}>{toArabicNumerals(0)}</Text>
           </View>
           <View style={styles.divider} />
           <View style={styles.statRow}>
-            <Text style={styles.statIcon}>🎙️</Text>
+            <Feather name="mic" size={18} color={colors.primary} style={styles.statIcon} />
             <Text style={styles.statLabel}>وصفات بصوت طنط منى</Text>
             <Text style={styles.statValue}>{toArabicNumerals(favorites.size)}</Text>
           </View>
@@ -58,13 +60,13 @@ export default function ProfileScreen() {
         <Text style={styles.sectionTitle}>الإعدادات</Text>
 
         <View style={styles.settingsCard}>
-          <SettingRow icon="🔔" label="الإشعارات" note="قريباً" />
+          <SettingRow icon="bell" label="الإشعارات" note="قريباً" />
           <View style={styles.divider} />
-          <SettingRow icon="🔊" label="إعدادات الصوت" note="صوت طنط منى" />
+          <SettingRow icon="volume-2" label="إعدادات الصوت" note="صوت طنط منى" />
           <View style={styles.divider} />
-          <SettingRow icon="🌐" label="اللغة" note="العربية" />
+          <SettingRow icon="globe" label="اللغة" note="العربية" />
           <View style={styles.divider} />
-          <SettingRow icon="📱" label="عن التطبيق" note="الإصدار ١.٠.٠" />
+          <SettingRow icon="info" label="عن التطبيق" note="الإصدار ١.٠.٠" />
         </View>
 
         {/* App info */}
@@ -72,7 +74,7 @@ export default function ProfileScreen() {
         <Text style={styles.version}>الإصدار 1.0.0</Text>
         <Text style={styles.version}>#هو_كل_يوم_أكل</Text>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -94,18 +96,18 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body, color: colors.neutralMuted },
   statsCard: { backgroundColor: colors.neutralSurface, borderRadius: 12, marginBottom: spacing.xl, overflow: 'hidden' },
   statRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  statIcon: { fontSize: 18, marginRight: spacing.md },
+  statIcon: { marginRight: spacing.md },
   statLabel: { ...typography.body, color: colors.neutralMid, flex: 1 },
   statValue: { ...typography.h2, color: colors.primary },
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
   sectionTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.md },
   settingsCard: { backgroundColor: colors.neutralSurface, borderRadius: 12, marginBottom: spacing.xl, overflow: 'hidden' },
   settingRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
-  settingIcon: { fontSize: 20, marginRight: spacing.md },
+  settingIcon: { marginRight: spacing.md },
   settingContent: { flex: 1 },
   settingLabel: { ...typography.body, color: colors.neutralDark },
   settingNote: { ...typography.bodySmall, color: colors.neutralMuted },
-  settingArrow: { fontSize: 16, color: colors.neutralLight },
+  settingArrow: { color: colors.neutralLight },
   appTagline: { ...typography.body, color: colors.neutralMuted, textAlign: 'center', marginBottom: spacing.xs },
   version: { ...typography.caption, color: colors.neutralLight, textAlign: 'center', marginBottom: 2 },
 });

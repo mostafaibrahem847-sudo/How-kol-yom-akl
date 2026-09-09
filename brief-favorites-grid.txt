@@ -1,0 +1,32 @@
+# Favorites Recipe Cards: 2-Column Grid Fix
+
+## Goal
+Reorganize the Favorites recipe cards into a clean, responsive 2-column grid layout.
+
+## Current State
+- File: `src/screens/FavoritesScreen.tsx`
+- Grid uses `flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'space-between'`
+- RecipeCard has fixed width `CARD_WIDTH = Math.min(width - spacing.lg * 2, 280)` 
+- Cards currently may not display exactly 2 per row on all viewports
+
+## Changes Required (FavoritesScreen.tsx only)
+1. Wrap each `RecipeCard` in a `View` with `style={styles.cardWrapper}`
+2. Add `cardWrapper` style: `{ width: '48%' }`
+3. Change `grid` style to use `justifyContent: 'flex-start'` (not 'space-between')
+4. Keep all other styles unchanged
+
+## Constraints
+- Do NOT change `RecipeCard.tsx` at all
+- Do NOT change card design, typography, colors, images, content, buttons, header, or bottom navigation
+- Do NOT change card functionality
+- Preserve RTL ordering (layout direction on container)
+- Ensure exactly 2 cards per row on current mobile viewport
+- Cards must have equal width
+- Consistent horizontal and vertical gaps
+
+## TypeScript Check
+After changes, run `npx tsc --noEmit` and fix any errors.
+
+## Report Contract
+Report: files edited, line ranges changed, TypeScript check result, and confirmation that grid shows exactly 2 cards per row.
+Do NOT commit.

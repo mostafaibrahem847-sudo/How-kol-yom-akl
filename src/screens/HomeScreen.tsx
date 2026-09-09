@@ -1,14 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, typography, buttonSize } from '../theme';
+import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useRecipes } from '../data/queries';
 import RecipeCard from '../components/RecipeCard';
-
-const { width } = Dimensions.get('window');
+import AppHeader from '../components/AppHeader';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -17,8 +15,8 @@ export default function HomeScreen() {
   const feedRecipes = recipes?.slice(1) ?? [];
 
   return (
-    <SafeAreaView style={styles.root} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+    <View style={styles.root}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* Greeting */}
         <View style={styles.greeting}>
           <Text style={styles.greetingText}>{t.home.greeting}</Text>
@@ -59,24 +57,35 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.feedGrid}>
             {feedRecipes.map((r) => (
-              <RecipeCard
-                key={r.id}
-                recipe={r}
-                onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-                onVoicePress={r.audioAvailable ? () => console.log('voice', r.id) : undefined}
-              />
+              <View key={r.id} style={styles.cardWrapper}>
+                <RecipeCard
+                  recipe={r}
+                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                  onVoicePress={r.audioAvailable ? () => console.log('voice', r.id) : undefined}
+                />
+              </View>
             ))}
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Fixed top header overlay */}
+      <View style={styles.fixedHeader}>
+        <AppHeader indicator={t.nav.home} />
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.secondary },
-  scroll: { paddingHorizontal: screenPadding.horizontal, paddingBottom: 100 },
-  greeting: { marginTop: spacing.xl, marginBottom: spacing.xl },
+  scrollView: { flex: 1 },
+  scroll: {
+    paddingHorizontal: screenPadding.horizontal,
+    paddingTop: headerHeight,
+    paddingBottom: 100,
+  },
+  greeting: { marginTop: spacing.md, marginBottom: spacing.xl },
   greetingText: { ...typography.h1, color: colors.neutralDark, marginBottom: spacing.sm },
   subtitle: { ...typography.bodyLarge, color: colors.neutralMid },
   heroWrapper: { marginBottom: spacing.xl, alignItems: 'center' },
@@ -93,5 +102,13 @@ const styles = StyleSheet.create({
   filterChipText: { ...typography.label, color: colors.neutralMid },
   feedHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
   feedSub: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.lg },
-  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
+  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
+  cardWrapper: { width: '48%' },
+  fixedHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
 });
