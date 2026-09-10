@@ -67,11 +67,12 @@ export default function SearchScreen() {
         {/* Results grid */}
         <View style={styles.resultsGrid}>
           {results.map((r) => (
-            <RecipeCard
-              key={r.id}
-              recipe={r}
-              onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-            />
+            <View key={r.id} style={styles.cardWrapper}>
+              <RecipeCard
+                recipe={r}
+                onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+              />
+            </View>
           ))}
         </View>
 
@@ -150,7 +151,8 @@ const styles = StyleSheet.create({
   },
   filterChipText: { ...typography.label, color: colors.neutralMid },
   resultsLabel: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.md },
-  resultsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
+  resultsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
+  cardWrapper: { width: '48%' },
   emptyText: { ...typography.bodyLarge, color: colors.neutralMuted, textAlign: 'center', marginVertical: spacing.xl },
   encourageBox: { backgroundColor: colors.secondaryLight, borderRadius: 12, padding: spacing.lg, marginTop: spacing.lg },
   encourageTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },

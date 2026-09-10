@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Feather from '@expo/vector-icons/Feather';
 import {
@@ -11,6 +11,7 @@ import {
   radius,
   fontWeight,
   fontFamily,
+  screenPadding,
 } from '../theme';
 import { Recipe } from '../types/recipe';
 import CategoryChip from './CategoryChip';
@@ -20,6 +21,21 @@ import { useFavorites } from '../state/favorites';
 
 const { width } = Dimensions.get('window');
 const CARD_MAX_WIDTH = Math.min(width - spacing.lg * 2, 280);
+
+// Compact horizontal-tile sizing.
+// The card NEVER derives its height from the image: the height is computed
+// from the measured grid-cell width, and the image half simply fills it. The
+// ratio + clamp keep it a deliberate compact tile on 360-390px phones while
+// stopping an image's intrinsic dimensions from stretching the card.
+const CARD_RATIO = 0.78;
+const CARD_MIN_HEIGHT = 136;
+const CARD_MAX_HEIGHT = 184;
+const FALLBACK_CELL_WIDTH = Math.max(
+  120,
+  (width - screenPadding.horizontal * 2 - spacing.md) / 2
+);
+const cardHeightForWidth = (w: number) =>
+  Math.round(Math.min(Math.max(w * CARD_RATIO, CARD_MIN_HEIGHT), CARD_MAX_HEIGHT));
 
 type Props = {
   recipe: Recipe;
@@ -38,6 +54,15 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
   // width (larger phones / tablet / web) the card steps up to the roomier scale
   // and the difficulty label is shown beside the time (it only fits then).
   const [roomy, setRoomy] = useState(false);
+  // Measured width of the actual grid cell this card was placed in. Drives the
+  // controlled height so two cards in a row always match and intrinsic image
+  // dimensions can never influence the layout.
+  const [cardWidth, setCardWidth] = useState(FALLBACK_CELL_WIDTH);
+
+  const handleCardLayout = (e: LayoutChangeEvent) => {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && Math.abs(w - cardWidth) > 1) setCardWidth(w);
+  };
 
   if (isHero) {
     return (
@@ -110,11 +135,14 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
     );
   }
 
+  const cardHeight = cardHeightForWidth(cardWidth);
+
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      style={[styles.card, styles.cardDefault]}
+      onLayout={handleCardLayout}
+      style={[styles.card, styles.cardDefault, { height: cardHeight }]}
     >
       {/*
         Balanced 50/50 row, compact-scaled for a ~half-screen grid column. The
@@ -169,7 +197,7 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
             onLayout={(e) => setRoomy(e.nativeEvent.layout.width >= 120)}
           >
           <View style={styles.chipClip}>
-            <CategoryChip label={recipe.category} color={recipe.categoryColor ?? 'olive'} small />
+            <CategoryChip label={recipe.category} color={recipe.categoryColor ?? 'olive'} dense />
           </View>
 
           <Text style={[styles.cardTitle, roomy && styles.cardTitleRoomy]} numberOfLines={2}>
@@ -231,8 +259,12 @@ const styles = StyleSheet.create({
   cardDefault: {
     borderWidth: 1,
     borderColor: colors.border,
+    // Grids provide vertical spacing via `gap`; the base card margin would
+    // double it (24px between rows instead of 12px).
+    marginBottom: 0,
   },
   cardRow: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'stretch',
   },
@@ -248,7 +280,9 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.card,
     borderBottomRightRadius: radius.card,
   },
-  image: { width: '100%', height: '100%' },
+  // Fills the (already fixed) card height and is taken out of flow so it can
+  // never contribute to the card's measured height.
+  image: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   imagePlaceholder: {
     width: '100%',
     height: '100%',
@@ -296,7 +330,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     paddingHorizontal: 6,
-    paddingVertical: 6,
+    paddingVertical: 5,
   },
   chipClip: {
     alignSelf: 'flex-start',
@@ -308,7 +342,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontFamily,
     fontSize: 13,
-    lineHeight: 19,
+    lineHeight: 18,
     fontWeight: fontWeight.bold,
     color: colors.neutralDark,
     marginBottom: 2,
@@ -346,11 +380,11 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     color: colors.neutralMuted,
     flexShrink: 1,
-    marginBottom: 5,
+    marginBottom: 3,
   },
   spacer: { flex: 1, minHeight: 0 },
   ctaCompact: {
-    height: 30,
+    height: 28,
     backgroundColor: colors.primary,
     borderRadius: 7,
     alignItems: 'center',
@@ -359,7 +393,7 @@ const styles = StyleSheet.create({
   ctaCompactText: {
     fontFamily,
     fontSize: 12,
-    lineHeight: 16,
+    lineHeight: 17,
     fontWeight: fontWeight.bold,
     color: colors.white,
   },
@@ -367,11 +401,11 @@ const styles = StyleSheet.create({
   // ---- roomier scale (larger phones / tablet / web columns) ----
   // Applied as array overrides on top of the compact styles once the content
   // half measures >= 120px wide, so proportions stay balanced at both sizes.
-  contentHalfRoomy: { paddingHorizontal: 10, paddingVertical: 9 },
-  cardTitleRoomy: { fontSize: 15, lineHeight: 22 },
-  metaTextRoomy: { fontSize: 12, lineHeight: 17 },
-  cardDescRoomy: { fontSize: 12, lineHeight: 17 },
-  ctaCompactRoomy: { height: 36, borderRadius: 8 },
+  contentHalfRoomy: { paddingHorizontal: 10, paddingVertical: 8 },
+  cardTitleRoomy: { fontSize: 15, lineHeight: 21 },
+  metaTextRoomy: { fontSize: 12, lineHeight: 19 },
+  cardDescRoomy: { fontSize: 12, lineHeight: 19 },
+  ctaCompactRoomy: { height: 34, borderRadius: 8 },
   ctaTextRoomy: { fontSize: 13, lineHeight: 18 },
 
   // ---------- hero (unchanged vertical layout) ----------

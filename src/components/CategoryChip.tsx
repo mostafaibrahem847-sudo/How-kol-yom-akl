@@ -6,9 +6,11 @@ type Props = {
   label: string;
   color?: 'olive' | 'amber' | 'mint' | 'terracottaLight' | 'oliveDark';
   small?: boolean;
+  /** Extra-compact vertical metrics for the compact horizontal recipe tile. */
+  dense?: boolean;
 };
 
-export default function CategoryChip({ label, color = 'olive', small = false }: Props) {
+export default function CategoryChip({ label, color = 'olive', small = false, dense = false }: Props) {
   const bgColor =
     color === 'olive' ? colors.accent :
     color === 'amber' ? colors.success :
@@ -18,8 +20,13 @@ export default function CategoryChip({ label, color = 'olive', small = false }: 
     colors.accent;
 
   return (
-    <View style={[styles.chip, { backgroundColor: bgColor, paddingHorizontal: small ? spacing.sm : spacing.md, paddingVertical: small ? 2 : spacing.xs }]}>
-      <Text style={[styles.text, { fontSize: small ? 10 : 11 }]} numberOfLines={1}>{label}</Text>
+    <View style={[styles.chip, { backgroundColor: bgColor, paddingHorizontal: small || dense ? spacing.sm : spacing.md, paddingVertical: small || dense ? 2 : spacing.xs }]}>
+      <Text
+        style={[styles.text, dense ? styles.textDense : small ? styles.textSmall : styles.textDefault]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
     </View>
   );
 }
@@ -34,4 +41,9 @@ const styles = StyleSheet.create({
     ...typography.label,
     fontWeight: '600',
   },
+  textDefault: { fontSize: 11 },
+  textSmall: { fontSize: 10 },
+  // Compact card chip: tighter line box so the chip stays small without
+  // changing the chip sizes used elsewhere (detail screen keeps textDefault).
+  textDense: { fontSize: 10, lineHeight: 15 },
 });
