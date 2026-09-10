@@ -1,10 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
-import { placeholderRecipes } from '../data/recipes';
+import { useRecipes } from '../data/queries';
 import RecipeCard from '../components/RecipeCard';
 import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
@@ -14,7 +14,11 @@ export default function FavoritesScreen() {
   const { favorites } = useFavorites();
   const count = favorites.size;
 
-  const favRecipes = placeholderRecipes.filter((r) => favorites.has(r.id));
+  // Resolve the stored favorite ids against the single Supabase catalog (the
+  // same cached useRecipes() result Home and Search use). Ids that no longer
+  // exist in the catalog are simply not rendered.
+  const { data: recipes, isLoading, isError } = useRecipes();
+  const favRecipes = (recipes ?? []).filter((r) => favorites.has(r.id));
 
   return (
     <View style={styles.root}>
@@ -30,7 +34,7 @@ export default function FavoritesScreen() {
           <View style={styles.pillRow}>
             <TouchableOpacity style={[styles.pill, styles.pillActive]}>
               <Text style={[styles.pillText, styles.pillTextActive]}>{t.favorites.filters.all}</Text>
-              <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count > 0 ? count : 6}</Text></View>
+              <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count}</Text></View>
             </TouchableOpacity>
             <TouchableOpacity style={styles.pill}>
               <Text style={styles.pillText}>{t.favorites.filters.tried}</Text>
@@ -64,6 +68,10 @@ export default function FavoritesScreen() {
               </TouchableOpacity>
             </View>
           </View>
+        ) : isLoading ? (
+          <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
+        ) : isError ? (
+          <Text style={styles.emptyBody}>حدث خطأ في تحميل الوصفات</Text>
         ) : (
           <>
             <Text style={styles.resultsCount}>{`${count} وصفة مفضلة`}</Text>

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList, ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
-import { placeholderRecipes } from '../data/recipes';
+import { useRecipes } from '../data/queries';
 import { toArabicNumerals } from '../i18n/numerals';
 import RecipeCard from '../components/RecipeCard';
 import AppHeader from '../components/AppHeader';
@@ -16,7 +16,10 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
 
-  const results = placeholderRecipes.filter((r) =>
+  // Single authoritative catalog: the same cached useRecipes() result Home uses.
+  // Search still filters that loaded set client-side (real server search is Phase 5).
+  const { data: recipes, isLoading, isError } = useRecipes();
+  const results = (recipes ?? []).filter((r) =>
     r.title.includes(query) || r.description.includes(query) || r.category.includes(query)
   );
 
@@ -65,18 +68,24 @@ export default function SearchScreen() {
         )}
 
         {/* Results grid */}
-        <View style={styles.resultsGrid}>
-          {results.map((r) => (
-            <View key={r.id} style={styles.cardWrapper}>
-              <RecipeCard
-                recipe={r}
-                onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-              />
-            </View>
-          ))}
-        </View>
+        {isLoading ? (
+          <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
+        ) : isError ? (
+          <Text style={styles.emptyText}>حدث خطأ في تحميل الوصفات</Text>
+        ) : (
+          <View style={styles.resultsGrid}>
+            {results.map((r) => (
+              <View key={r.id} style={styles.cardWrapper}>
+                <RecipeCard
+                  recipe={r}
+                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                />
+              </View>
+            ))}
+          </View>
+        )}
 
-        {results.length === 0 && query.length > 0 && (
+        {!isLoading && !isError && results.length === 0 && query.length > 0 && (
           <Text style={styles.emptyText}>ما لاقيناش وصفة بـ "{query}"</Text>
         )}
 

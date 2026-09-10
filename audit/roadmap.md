@@ -1032,3 +1032,32 @@ Web reproduction via headless Edge (CDP) against the live dev server at **390×8
 - **RLS scope:** policies are `anon`-only (no auth exists). If accounts are added, `authenticated` policies and per-user tables need their own review.
 - **`audio_urls` unique index** assumes one narration row per recipe; Phase 6 revisits it if per-step audio is adopted.
 - **`dist-check/`** was untracked; the on-disk files were not deleted (local build artifact).
+
+---
+
+## Phase 2 — Implementation Record (executed 2026-09-10)
+
+> **Execution note.** Data-architecture phase only. Supabase is now the single authoritative runtime recipe source for Home, Search, Favorites, and Recipe Detail. No UI was redesigned, no styles/tokens changed, no persistence added, no server search, no audio/cooking/RTL changes, and no Supabase schema changes.
+
+### 2.1 What changed
+
+- **`src/data/queries.ts`** — `mapRecipe` (the single list+detail mapper) now maps `image_url → imageUrl`; `useRecipes` selects `image_url`. Added dev-only (`__DEV__`) integrity checks: catalog ids must be non-empty/unique, and `useRecipe` warns when a navigation id does not resolve. No production UI.
+- **`src/screens/SearchScreen.tsx`** — replaced `placeholderRecipes` with the shared `useRecipes()` cache; still filters the loaded set client-side (Phase 5 owns server search). Added loading spinner + error text; empty-message now gated on load completion.
+- **`src/screens/FavoritesScreen.tsx`** — resolves stored favorite ids against the shared `useRecipes()` catalog (unknown ids are not rendered); removed the mock `count > 0 ? count : 6` fallback so the pill shows the real set size; added loading spinner + error text.
+- **`src/data/recipes.ts`** — removed the dead local detail provider (`getRecipeDetail` + its `fullDetails` block). The file is retained only as a temporary seed/reference dataset and is no longer imported by any screen.
+
+### 2.2 Validation
+
+- Grep: no screen imports `placeholderRecipes`, `getRecipeDetail`, or `../data/recipes`; `searchRecipes` has no callers (reserved for Phase 5). ✅
+- `npm run typecheck` → exit 0. ✅
+- Web E2E (headless Edge over CDP, 390×844, live Supabase): **15/15 PASS** —
+  Home shows 10 DB cards; Home→Detail resolves okra; favorite toggle works; Favorites shows the resolved DB recipe with real count `1` (and `0` when empty — mock `6` gone); Search shows the same 10-card DB catalog; client-side filter (ملوخية → 1) works; Search→Detail resolves; no error states; no console/runtime errors.
+- Only the four files above were modified; no visual/style tokens touched.
+
+### 2.3 Remaining / deferred
+
+- Search still filters the full loaded catalog client-side (interim by design; Phase 5 replaces with server FTS).
+- Favorites remain in-memory (Phase 4 adds persistence + stale-id pruning + status pills).
+- `RecipeCard`'s inline heart toggles favorites but the UI updates are outside this phase's scope.
+- `image_url` is mapped but all rows are NULL (content track); cards/detail fall back to placeholders as before.
+- `placeholderRecipes` remains an unused export until Phase 9 removes the file.

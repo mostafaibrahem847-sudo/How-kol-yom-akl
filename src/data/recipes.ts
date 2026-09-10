@@ -1,4 +1,4 @@
-import { Recipe, RecipeDetail } from '../types/recipe';
+import { Recipe } from '../types/recipe';
 
 const placeholders: Recipe[] = [
   {
@@ -124,56 +124,8 @@ const placeholders: Recipe[] = [
 
 export const placeholderRecipes = placeholders;
 
-const fullDetails: Record<string, Omit<RecipeDetail, 'id' | 'minutes' | 'persons' | 'category' | 'description' | 'title'> & Partial<Pick<RecipeDetail, 'title' | 'description' | 'minutes' | 'persons' | 'category'>>> = {
-  okra: {
-    ingredients: [
-      { id: 'i1', text: '١ كيلو بامية بلدي مقمعة طازة صغننة' },
-      { id: 'i2', text: 'نصف كيلو لحمة ضاني مسلوقة نص سلقة مع الشوربة' },
-      { id: 'i3', text: '٤ أكواب عصير طماطم فريش متسبكة تقيلة' },
-      { id: 'i4', text: 'رأس توم بلدي مفروم مع قرن فلفل حامي أحمر' },
-      { id: 'i5', text: '٢ ملعقة كبيرة سمنة بلدي بقري فلاحي' },
-      { id: 'i6', text: 'ملعقة كزبرة ناشفة مطحونة ناعم للطشة' },
-      { id: 'i7', text: 'ليمونة معصفرة مقطعة مكعبات صغننة + عصير ليمونة فريش' },
-      { id: 'i8', text: 'ملح خشن، فلفل أسود مجروش، ورشة جوزة الطيب' },
-    ],
-    steps: [
-      { id: 's1', title: 'تشويح اللحمة مع السمنة', body: 'في حلة سخنة، انزلي بمعلقة سمنة وشوحي قطع اللحمة الضاني تاخد لون دهبي ريحتها تطلع مع فصين حبهان مستكة.' },
-      { id: 's2', title: 'تسبيكة الصلصة ورمي البامية', body: 'ضيفي عصير الطماطم وسيبيه يتسبك على نار هادية ١٥ دقيقة، بعدين انزلي بالبامية وكبشتين من شوربة الضاني السخنة.' },
-      { id: 's3', title: 'طشة التوم والكزبرة', body: 'في طاسة صغيرة، شوحي التوم المفروم مع الكزبرة الناشفة في السمنة البلدي، وأول ما يصفر طشيه على البامية وقلبي برقة.' },
-      { id: 's4', title: 'تجهيز الطاجن والليمون المعصفر', body: 'سخني طاجن الفخار في الفرن الأول، صبي فيه البامية واللحمة، وزعي قطع الليمون المعصفر وقرن الشطة فوق الوش.' },
-      { id: 's5', title: 'دخول الفرن والتحمير', body: 'دخلي الطاجن فرن ساخن على ٢٠٠ درجة مئوية لمدة ٢٥ دقيقة، وشغلي الشواية دقيقتين عشان ياخد وش أحمر مقرمش وريحة تجيب لآخر الشارع!' },
-    ],
-    tips: [
-      { id: 't1', title: 'بلاش تقليب كتير في البامية!', body: 'البامية رقيقة وحساسة، هزي الحلة أو الطاجن بإيدك بدل المغرفة عشان متتهريش وتطلع معاكي الحبة بحبتها وشكلها يفتح النفس.' },
-      { id: 't2', title: 'تسخين الطاجن الفخار سر التسوية', body: 'حطي الطاجن الفاضي جوة الفرن وهو بيسخن ١٠ دقايق قبل ما تنزلي بالأكل، الحركة دي بتحبس النكهة وتخلي الصلصة تبكبك فوراً.' },
-    ],
-  },
-};
-
-export const getRecipeDetail = (id: string): RecipeDetail | undefined => {
-  const base = placeholders.find((p) => p.id === id);
-  if (!base) return undefined;
-  const extra = fullDetails[id];
-  if (extra) {
-    return { ...base, ...extra } as RecipeDetail;
-  }
-  return {
-    ...base,
-    ingredients: [
-      { id: 'i1', text: 'مكونات أساسية متوفرة في أي مطبخ' },
-      { id: 'i2', text: 'بصلة متوسطة مفرومة ناعم' },
-      { id: 'i3', text: '٢ طماطم مبشورة' },
-      { id: 'i4', text: 'فصين توم + ملعقة سمنة بلدي' },
-      { id: 'i5', text: 'ملح وفلفل أسود وكمون' },
-    ],
-    steps: [
-      { id: 's1', title: 'تجهيز المكون الأساسي', body: 'اغسلي المكونات كويس وصفيها من المية، وجهزي البولة والتوم قبل ما تبدأي.' },
-      { id: 's2', title: 'التشويح', body: 'في طاسة سخنة، شوحي المكونات الأولية في السمنة لحد ما تاخد لون ذهبي وريحة تطلع.' },
-      { id: 's3', title: 'إضافة البهارات', body: 'ضيفي البهارات على البولة وقلبي كويس، وسيبيها تتسبك شوية عشان النكهة تتركز.' },
-      { id: 's4', title: 'التسوية النهائية', body: 'غطي الحلة وسيبيها على نار هادية لحد ما كل المكونات تستوي تماماً وتتجانس مع بعض.' },
-    ],
-    tips: [
-      { id: 't1', title: 'نصيحة ست الكل', body: 'متستعجليش النار، النار الهادية بتطلع أحلى نكهة وبتحافظ على القوام.' },
-    ],
-  };
-};
+// NOTE: This file is a temporary seed/reference dataset only. It is no longer
+// imported by any screen at runtime — Supabase (src/data/queries.ts) is the
+// single authoritative recipe source. The former local detail provider
+// (getRecipeDetail) has been removed; detail always comes from useRecipe(id).
+// This file is slated for deletion in Phase 9 once the seed is authoritative.
