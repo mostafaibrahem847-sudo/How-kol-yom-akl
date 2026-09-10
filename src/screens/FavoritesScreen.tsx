@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
@@ -11,7 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 
 export default function FavoritesScreen() {
   const navigation = useNavigation<any>();
-  const { favorites } = useFavorites();
+  const { favorites, hydrated, pruneStale } = useFavorites();
   const count = favorites.size;
 
   // Resolve the stored favorite ids against the single Supabase catalog (the
@@ -19,6 +19,15 @@ export default function FavoritesScreen() {
   // exist in the catalog are simply not rendered.
   const { data: recipes, isLoading, isError } = useRecipes();
   const favRecipes = (recipes ?? []).filter((r) => favorites.has(r.id));
+
+  // After the authoritative remote catalog is available AND the persisted
+  // snapshot has been merged, drop any favorite ids that no longer exist in
+  // the catalog so the count stays honest and no ghost entries linger.
+  useEffect(() => {
+    if (!hydrated || !recipes || recipes.length === 0) return;
+    const validIds = new Set(recipes.map((r) => r.id));
+    pruneStale(validIds);
+  }, [hydrated, recipes, pruneStale]);
 
   return (
     <View style={styles.root}>
