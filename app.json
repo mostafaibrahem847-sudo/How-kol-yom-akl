@@ -19,10 +19,6 @@
     "plugins": [
       "expo-audio",
       "expo-asset"
-    ],
-    "extra": {
-      "supabaseUrl": "https://lawoormzqfeyafjrptwc.supabase.co",
-      "supabaseAnonKey": "sb_publishable_hmUpy67-fc1dlFXICZ2Scw_9M7k12lq"
-    }
+    ]
   }
 }

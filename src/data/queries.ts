@@ -29,7 +29,9 @@ export const useRecipes = () =>
         .from('recipes')
         .select(
           'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color'
-        );
+        )
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true });
 
       if (error) {
         console.error('Supabase recipes error:', error);
@@ -48,9 +50,9 @@ export const useRecipe = (id: string) =>
     queryFn: async () => {
       const [recipeRes, ingredientsRes, stepsRes, tipsRes, audioRes] = await Promise.all([
         supabase.from('recipes').select('*').eq('id', id).single(),
-        supabase.from('ingredients').select('*').eq('recipe_id', id).order('id'),
+        supabase.from('ingredients').select('*').eq('recipe_id', id).order('sort_order'),
         supabase.from('steps').select('*').eq('recipe_id', id).order('sort_order'),
-        supabase.from('tips').select('*').eq('recipe_id', id).order('id'),
+        supabase.from('tips').select('*').eq('recipe_id', id).order('sort_order'),
         supabase.from('audio_urls').select('url').eq('recipe_id', id).single(),
       ]);
 

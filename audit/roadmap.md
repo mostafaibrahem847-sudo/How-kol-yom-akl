@@ -834,3 +834,201 @@ Minimum conditions that must all be true before the MVP is considered production
 - [ ] Monetization/notifications/settings rows in Profile remain placeholders ("قريباً") — acceptable for MVP only by explicit decision.
 
 **Final rule:** this document is a roadmap only. Each phase requires its own user review and explicit approval before the next begins; nothing is implemented until a phase is started, and no phase may exceed its scope.
+
+---
+
+## Phase 0 — Baseline Record (executed 2026-09-10)
+
+> **Execution note.** This phase was executed **read-only**. Per the execution instruction, **no commit, tag, or push was created**. Task 1's "freeze" step is therefore recorded as *pending user action*; the exact working state is already captured by commit `e5a9594` (see §0.2). No application source, config, SQL, dependency, or `.env` file was changed. The only file written by this phase is this roadmap record.
+
+### 0.1 Environment — VERIFIED
+
+- OS: Windows (MINGW64_NT-10.0-26200); Node **v24.11.0**; npm **11.6.1**.
+- Expo SDK **57.0.20**; Expo CLI **57.0.22**; React Native **0.86.3**; React **19.2.3**; react-native-web **^0.21.2**.
+- React Navigation **^6.1.18**; TanStack Query **^5.59.0**; Zustand **^4.5.5**; supabase-js **^2.45.4**; expo-audio **~57.0.4**; expo-updates **~57.0.21**; TypeScript **~6.0.3**.
+- Dev commands: `npm run start` (`expo start`), `npm run web` (`expo start --web`), `npm run android`, `npm run ios`, `npm run typecheck` (`tsc --noEmit`).
+- Android tooling: **`adb` is not on PATH and no physical device is reachable from this environment** → on-device checks are NOT VERIFIED (see §0.5). A dev server (`expo start --web`) was already listening on `:8081`.
+
+### 0.2 Repository state — VERIFIED
+
+- `git status --porcelain` → **empty**; working tree clean.
+- `HEAD` = `origin/main` = **`e5a9594`** ("fix: optimize recipe cards for mobile grid"). Branch `main` tracks `origin/main`, up to date.
+- Commit `e5a9594` contains 4 files: `.vscode/launch.json`, `src/components/CategoryChip.tsx`, `src/components/RecipeCard.tsx`, `src/screens/SearchScreen.tsx` (the most recent RecipeCard/QR work).
+- No tags; no stashes.
+- **Freeze (Task 1): NOT CREATED** (execution instruction forbids commit/tag/push). Diff anchor for later phases: `e5a9594`.
+
+### 0.3 App startup / dev server — VERIFIED
+
+- Fresh `npx expo start --port 8099` boots cleanly: `Starting project at …` → `Waiting on http://localhost:8099`; TCP listener confirmed; probe server stopped afterwards. No boot errors.
+- Running `expo start --web` on `:8081` serves this project; `GET http://127.0.0.1:8081/_expo/open` → android `exp://192.168.1.4:8081`, web `http://192.168.1.4:8081`.
+- Android bundle `GET /index.bundle?platform=android&dev=true` → **HTTP 200** (6,759,471 B).
+- Cairo font gate: `document.fonts` → `Cairo:loaded`, `material-community:loaded`, `feather:loaded`; header title computed `font-family: Cairo`. App renders only after the font resolves.
+- `npm run typecheck` → **exit 0** (clean).
+
+### 0.4 Baseline Validation Checklist (regression oracle)
+
+Web reproduction via headless Edge (CDP) against the live dev server at **390×844**, committing nothing:
+
+| # | Flow | Result | Evidence |
+|---|------|--------|----------|
+| 1 | Web root is RTL | **PASS** | `document.documentElement.dir = "rtl"` |
+| 2 | Home loads recipes from Supabase | **PASS** | hero + 9 feed cards; no "حدث خطأ" error state; greeting visible |
+| 3 | Home → RecipeDetail (okra) | **PASS** | ingredients tab shows 8 real rows; title/stats/CTA present |
+| 4 | Detail tabs (Ingredient / Steps / Tips) | **PASS** | Steps shows "تشويح اللحمة مع السمنة"; Tips shows "بلاش تقليب كتير في البامية!" |
+| 5 | Favorite toggle (in-memory) | **PASS** | button flips "أضيفي للمفضلة" → "إزالة من المفضلة" |
+| 6 | Detail → CookingMode | **PASS** | exit label, step 1 ("تجهيز المكونات"), timer chip, next button present |
+| 7 | CookingMode next step | **PASS** | advances to "التشويح" |
+| 8 | CookingMode exit → Detail | **PASS** | returns to the detail screen |
+| 9 | Favorites tab reflects toggle | **PASS** | shows "1 وصفة مفضلة" + okra card (non-empty branch) |
+| 10 | Search tab renders input + results | **PASS** | input present; 10 local placeholder cards |
+| 11 | Search query filters | **PASS** | typing "ملوخية" → "تم العثور على ١ وصفة" |
+| 12 | Search results are 2-column | **PASS** | 4 cards: `172×136` at left 202 / 18, row tops 285 / 433 |
+| 13 | Profile tab renders | **PASS** | stats (المفضلة / أكل مجربة / بصوت طنط منى) + settings render |
+| 14 | Console errors during run | **PASS** | no `console.error`/`Log` errors captured |
+| 15 | Demo audio plays/pauses/replays | **FAIL** | see §0.6 / §0.8 — dock requests `https://example.com/audio/okra.mp3` and sticks in the `…` loading state |
+
+### 0.5 NOT VERIFIED (blocked by environment)
+
+- **Physical Android runtime** — cold-start RTL (`[rtl] … isRTL=…`), floating tab-bar geometry, safe-area/insets, shadows, gestures, and the **2-column RecipeCard on device** (no `adb`, no device).
+- **Web ↔ Android parity** of headers/safe areas/typography (only Web measured here).
+- **iOS** — not testable in this environment.
+- Live Supabase **dashboard-side** settings beyond what the anon REST probe reveals (e.g. whether RLS exists but is bypassed by a permissive policy — the write probes show writes are authorized from the anon role regardless).
+
+### 0.6 CURRENT ISSUES (recorded, deliberately not fixed in this phase)
+
+- **CRITICAL — Supabase RLS is effectively OFF.** Anon `PATCH` (0-match) → **HTTP 204**, anon `DELETE` (0-match) → **HTTP 204**, anon `INSERT` reached a table constraint (**HTTP 400 / 23502**) instead of a permission error. The public anon key can therefore read **and write/delete** every table. No data was mutated by the probes (0-match update/delete; duplicate/NOT-NULL insert), and all row counts were unchanged afterwards. [audit §3.1]
+- **HIGH — Demo audio is unreachable on the Supabase path.** Live `audio_urls` point to `https://example.com/audio/*.mp3` → **404**. Clicking play on the okra detail issues 2 requests to that URL and the dock stays in the loading state (matches audit §5.1: no error state).
+- **HIGH — Two parallel data sources / id scheme.** Home + Detail read Supabase (TEXT ids); Search + Favorites read `src/data/recipes.ts` placeholders. The live DB happens to use the same TEXT ids, so navigation resolves today — but the invariant lives only in data, not code. [audit §2, §4.1]
+- **MEDIUM — Only okra has full detail content.** Live rows: `ingredients` 8, `steps` 5, `tips` 2 — all okra. The other 9 recipes open a detail screen with empty tabs (audit §5.2).
+- **MEDIUM — Favorites are in-memory only**, with a mock `6` fallback in the empty pill count and a Western numeral in the Favorites count ("1 وصفة مفضلة"), inconsistent with the app-wide Eastern-Arabic numerals. Profile "وصفات بصوت طنط منى" reuses the favorites count; "أكلات مجربة" is hard-coded `0`. [audit §4.5]
+- **MEDIUM — Home list is unordered** (`useRecipes` has no `.order()/.limit()`), so the hero/feed are non-deterministic; no Home empty state. [audit §5.3]
+- **MEDIUM — Inert controls:** Home/Search filter chips and the Search voice chip have no `onPress`; CookingMode "عيدي تاني" is `() => {}` and the timer label is static `(٠٠:٠٢)`. [audit §3.2, §6.3]
+- **HIGH — Android RTL unverified** (configuration is RTL=true with no reload logic; see §0.7). [audit §4.2]
+- **HIGH — No tests/lint/CI** (typecheck + manual Web only). [audit §4.4]
+- Hygiene/dead code (dead `searchRecipes`/`getRecipeDetail`, unused deps such as `@qoder-ai/qoder-agent-sdk`, committed `package.json.backup-51`, unignored `dist-check/`, three diverging SQL files) — carried forward from the audit; not re-verified line-by-line here.
+
+### 0.7 RTL configuration (VERIFIED on Web / NOT VERIFIED on Android)
+
+- Single source of truth `src/i18n/rtl.ts`: `I18nManager.allowRTL(true)` + `forceRTL(true)` + `swapLeftAndRightInRTL(false)`; Web sets `document.documentElement dir="rtl"`. Call-site `index.js` → before root render.
+- **No automatic reload/restart logic exists** (intentionally removed): `Updates.reloadAsync` / `DevSettings.reload` appear only in the explanatory comment, never as calls. This must stay true.
+- Web verified: root `dir="rtl"`, image/leading content on the right, tab order Home-rightmost.
+- Android: requires a cold device start to confirm the `[rtl] platform=android runtime I18nManager.isRTL=…` log — **NOT VERIFIED**.
+
+### 0.8 Live Supabase posture (for Phase 1) — VERIFIED (anon REST)
+
+- Project: `https://lawoormzqfeyafjrptwc.supabase.co` (anon/publishable key from `app.json expo.extra`).
+- **Canonical/live schema = TEXT ids** (samples: `okra`, `molokhia`, `kofta`, `bechamel`, `oxtail`) — matches `src/db/schema.sql` / `src/db/seed.sql`, **not** the UUID variants.
+- Tables / columns / exact row counts:
+  - `recipes` (10): id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color, created_at
+  - `ingredients` (8): id, recipe_id, text, created_at
+  - `steps` (5): id, recipe_id, title, body, image_hint, sort_order, created_at
+  - `tips` (2): id, recipe_id, title, body, created_at
+  - `audio_urls` (6): id, recipe_id, url, created_at
+- **`recipes.audio_url` does NOT exist** (`select=audio_url` → HTTP 400 / `42703`) — audio is the separate `audio_urls` table. **No `image_url` column exists on `recipes`.**
+- **RLS/write posture: OFF** (see §0.6).
+- Probe method: anon `select` with `Prefer: count=exact`; write authorization tested with a zero-match `PATCH`, a zero-match `DELETE`, and a duplicate-PK `INSERT`. Row counts re-checked after (10/8/5/2/6 — unchanged); probe id absent.
+
+### 0.9 Audio reachability — VERIFIED
+
+- **DB (Home/Detail path):** `https://example.com/audio/{okra,molokhia}.mp3` → **HTTP 404** (`text/html`).
+- **Local placeholder path (Search/Favorites data):** `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1..6.mp3` → **HTTP 200**, `audio/mpeg` (6.7–10.2 MB each).
+- `useRecipe()` resolves `audioUrl` from the `audio_urls` row first, so the detail dock uses the **unreachable** `example.com` URL for the 6 seeded recipes. Expected to be replaced in Phase 6.
+
+### 0.10 MUST PRESERVE — current UI/geometry facts (Web @390×844, measured)
+
+- **Home header (AppHeader):** `top 0`, height **64**, full width 390; brand right, bell/avatar left (RTL).
+- **Floating bottom tab bar:** container `top 782 → bottom 832`, left 20, **351×50**; labels RTL right-to-left: الرئيسية (left 308) · بحث ووصفات (211) · المفضلة (133) · حسابي (49).
+- **RecipeCard — feed (Home & Search):** compact horizontal 2-column tile, **172×136** at 390 px (157×136 at 360 px, 138×136 at 320 px); column lefts 202 / 18; row gap 12 (row pitch 148). Image half fills the fixed height; first child (image) on the **right**; content sits inside the card (no clipping).
+- **RecipeCard — hero (Home):** **280×461** (vertical, unchanged).
+- **RecipeDetail:** back/share button `top 40`, 40×40 at left 334 (right in RTL); hero image **390×293** (3/4).
+- **RTL:** Web `dir="rtl"`; native `forceRTL(true)`, `swapLeftAndRightInRTL(false)`, **no reload/restart logic**.
+- **Typography:** Cairo loaded; Eastern-Arabic numerals used app-wide (exception noted in §0.6).
+- **Architecture invariant:** screens never call Supabase directly — all access via `src/data/queries.ts`; theme/i18n centralized; `src/i18n/rtl.ts` is the only RTL source.
+
+### 0.11 Phase 0 Definition of Done — status
+
+- [ ] Tagged/committed baseline of the exact working state — **NOT DONE by instruction** (commit/tag prohibited). State is captured at `e5a9594`; user may create a tag if desired.
+- [x] Written validation checklist with explicit PASS/FAIL results — this record, §0.4.
+- [x] Written answers: live schema = **TEXT ids**; RLS = **OFF**; audio = **DB URLs 404, dock sticks loading**; Web RTL = **yes**; Android RTL = **NOT VERIFIED**.
+- [x] No source code modified during the phase (only this roadmap record written).
+- [ ] User review of this baseline record; explicit approval to start Phase 1 — **pending**.
+
+### 0.12 Limitations of this baseline
+
+- Runtime checks were performed on the **Web target** (react-native-web) via headless Edge/CDP at a mobile viewport; they are strong evidence but not a substitute for a physical Android run.
+- Supabase RLS was inferred from anon-role REST responses, not from the Supabase dashboard or SQL editor; the conclusion (writes authorized) is evidence-backed but should be confirmed authoritatively in Phase 1.
+- No load/stress, memory, or bundle-size measurements were taken.
+
+---
+
+## Phase 1 — Implementation Record (executed 2026-09-10)
+
+> **Execution note.** Phase 1 was executed against the live Supabase project `lawoormzqfeyafjrptwc` with the service role (MCP). No UI, screens, components, navigation, theme, i18n, hooks, or feature logic were changed. No production rows were created, updated, or deleted (verified — see §1.6). The one schema migration applied is `20260910112513 phase_1_canonical_schema_rls`.
+
+### 1.1 Live-database inventory (source of truth, inspected first)
+
+- Project `lawoormzqfeyafjrptwc` (`https://lawoormzqfeyafjrptwc.supabase.co`), status ACTIVE_HEALTHY. Migrations on record: `20260904111438 phase_7_supabase_schema`, `20260904111545 seed_recipes_data`.
+- **The recorded migration statements do not match the live columns** (they declare UUID `recipes.id`/`recipe_id`; the live table uses TEXT). The live catalog therefore proves the checked-in/recorded SQL is not authoritative — live was inspected directly.
+- Tables / row counts / id types (unchanged by Phase 1):
+  - `recipes` (10): `id TEXT PK`, `recipe_id`-referenced children; no `audio_url`, no `image_url` before Phase 1.
+  - `ingredients` (8), `steps` (5), `tips` (2), `audio_urls` (6): `id UUID PK`, `recipe_id TEXT` FK → `recipes(id) ON DELETE CASCADE`.
+- Indexes before Phase 1: PKs, `idx_recipes_category`, `idx_recipes_title`/`idx_recipes_description` (GIN, `to_tsvector('arabic', …)`). `pg_ts_config` confirms the `arabic` configuration exists.
+- No `pg_policies` rows; **RLS disabled on all five tables**. anon/authenticated held full table grants (SELECT/INSERT/UPDATE/DELETE/…).
+- Data integrity: no orphan child `recipe_id`s; exactly one `audio_urls` row per audio recipe.
+
+### 1.2 Final canonical schema decision
+
+- **ID strategy: TEXT slug recipe ids** (`okra`, `molokhia`, …) — matches live, `src/data/recipes.ts`, seed, and all navigation params. Child tables keep **UUID** primary keys (live truth); `recipe_id` is a **TEXT FK** with `ON DELETE CASCADE`.
+- `recipes.audio_url` remains **absent**; audio stays in the separate `audio_urls` table (architecture preserved).
+- **`image_url TEXT` (nullable) added to `recipes`** per the roadmap/UI model. No URLs were invented; the content track supplies values later. (Mapping into `Recipe.imageUrl` is deferred to Phase 2, as the roadmap specifies.)
+- **Deterministic ordering added:** `recipes.sort_order` (curated 1–10, hero `okra` first), plus `sort_order` on `ingredients` and `tips` (steps already had it). Live values were backfilled deterministically without changing content.
+- **Uniqueness:** `audio_urls (recipe_id)` unique (supports the current `.single()` access pattern; revisit if Phase 6 adopts per-step audio); `(recipe_id, sort_order)` unique on `ingredients`/`steps`/`tips`.
+- Arabic search indexes kept on `to_tsvector('arabic', title|description)` plus the `category` btree (Phase 5 consumes them).
+
+### 1.3 RLS / security result — VERIFIED
+
+- RLS enabled on `recipes`, `ingredients`, `steps`, `tips`, `audio_urls`; one `SELECT` policy per table granted to `anon` (`using (true)`). No write policies exist.
+- **Role-switch probes** (`begin; set local role anon; …; rollback;`): `select count(*) from recipes` → **10**; `update recipes … returning 1` → **0 rows**; `delete … returning 1` → **0 rows**; `insert` → **ERROR 42501 (row-level security policy)**.
+- **Live REST probes with the anon key** (what the app uses): `GET /rest/v1/recipes` → **200** (ordered rows); `POST /rest/v1/recipes` → **401 / 42501**; `PATCH …?id=eq.okra` → **204, 0 rows**; `DELETE` → **204, 0 rows**. `recipes.id='okra'` title re-read unchanged; no probe rows exist.
+- No anon write path remains in any script (`scripts/migrate.js` is service-role-only and has no fallback credentials).
+
+### 1.4 Environment configuration decision
+
+- Client config now comes solely from **`EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY`** (`src/lib/supabase.ts` + `env.d.ts`). The duplicated `supabaseUrl`/`supabaseAnonKey` were **removed from `app.json` `extra`**.
+- `.env` (gitignored) renamed to `EXPO_PUBLIC_*`; committed **`.env.example`** carries placeholders only. Expo confirmed it loads/exports both vars, and the values are inlined into the built bundle.
+- A stale **tracked** web export (`dist-check/`) that embedded the superseded `app.json` credentials was untracked (`git rm --cached`; files remain on disk) and added to `.gitignore`. A tracked-file grep for the key material is now clean.
+- No service-role or ElevenLabs keys exist client-side. The anon key is public-by-design and safe **only because of the RLS policies above**.
+
+### 1.5 Authoritative files after Phase 1
+
+- **Schema:** `src/db/schema.sql` — the single canonical, idempotent schema (tables, ordering backfill, indexes/constraints, RLS + policies). Safe to re-run on live or fresh.
+- **Seed:** `src/db/seed.sql` — the single canonical seed, schema-compatible and idempotent (recipes upsert by `id`; children by `(recipe_id, sort_order)`; `audio_urls` by `recipe_id`). Parsed/validated: 10/79/55/20/6 rows, zero duplicate conflict keys.
+- **Superseded files removed:** `src/db/supabase-schema.sql`, `src/db/supabase-full-setup.sql` (history retained in git).
+- **Scripts:** `scripts/migrate.js` — service-role-only seeder that reads `src/db/seed.sql`; refuses to run without `SUPABASE_SERVICE_ROLE_KEY`; no hard-coded credentials. DDL is applied from `schema.sql` via the SQL editor/CLI.
+
+### 1.6 Validation results
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| `npm run typecheck` | **PASS** | exit 0 |
+| App starts with new env | **PASS** | `expo start --web` on :8099 → root 200; Android bundle 200 (6.75 MB) |
+| `EXPO_PUBLIC_*` inlined | **PASS** | bundle contains both URL and key |
+| anon SELECT (app queries) | **PASS** | recipes 10; okra ingredients 8 / steps 5 / tips 2 / audio 1; molokhia ingredients 0 (no error) |
+| anon INSERT / UPDATE / DELETE | **DENIED** | REST 401 (42501) / 204 (0 rows) / 204 (0 rows); SQL role-switch 0 / 0 / 42501 |
+| RLS enabled + policies | **PASS** | `pg_tables.rowsecurity=true` ×5; 5 `anon` SELECT policies |
+| Row counts unchanged | **PASS** | 10 / 8 / 5 / 2 / 6 before and after |
+| Content unchanged | **PASS** | `okra` title identical; no probe rows persisted |
+| Deterministic ordering | **PASS** | `recipes.sort_order` 1–10 (okra hero first); okra children ordered 1–8 / 1–2 |
+| One schema + one seed | **PASS** | `src/db/` contains only `schema.sql` + `seed.sql` |
+| Secrets grep (tracked files) | **PASS** | no publishable/service-role key outside `.env` / `.env.example` |
+| UI/geometry/RTL untouched | **PASS** | no screen/component/theme/i18n/navigation files changed |
+
+### 1.7 Unresolved / deferred (later phases)
+
+- **Seed vs. live content divergence:** `seed.sql` preserves the full authored child content (all 10 recipes); the live DB still contains the okra-only child subset (8/5/2). Phase 1 deliberately did **not** apply the seed to production. Applying it later would be additive (idempotent) — a content-track decision, not a Phase 1 requirement. The Release-Gate "seed matches live" item is therefore pending until that decision.
+- **`recipes.image_url`** is added but not yet mapped in `mapRecipe`/selects — Phase 2 (per roadmap Task 6).
+- **Ingredient/tip ordering** is now backed by `sort_order` and wired in `queries.ts`; full pagination/limit work remains Phase 3.
+- **Demo audio:** live/seed URLs are still `https://example.com/audio/*.mp3` placeholders; Phase 6 replaces them with real narration.
+- **RLS scope:** policies are `anon`-only (no auth exists). If accounts are added, `authenticated` policies and per-user tables need their own review.
+- **`audio_urls` unique index** assumes one narration row per recipe; Phase 6 revisits it if per-step audio is adopted.
+- **`dist-check/`** was untracked; the on-disk files were not deleted (local build artifact).
