@@ -1061,3 +1061,38 @@ Web reproduction via headless Edge (CDP) against the live dev server at **390×8
 - `RecipeCard`'s inline heart toggles favorites but the UI updates are outside this phase's scope.
 - `image_url` is mapped but all rows are NULL (content track); cards/detail fall back to placeholders as before.
 - `placeholderRecipes` remains an unused export until Phase 9 removes the file.
+
+---
+
+## Phase 3 — Implementation Record (executed 2026-09-10)
+
+> **Execution note.** Data/query/state behavior only. No UI redesign, no style/token changes, no schema/database mutation, no server search, no persistence, no audio, no cooking-mode or RTL changes.
+
+### 3.1 Query / data changes
+
+- **List (`useRecipes`)** — deterministic `sort_order ASC, id ASC` retained and now bounded by `LIMIT 100` (`RECIPES_LIST_LIMIT`); no pagination/infinite scroll invented.
+- **Detail (`useRecipe`)** — replaced the 5 parallel requests with **one embedded PostgREST request** (`recipes` + `ingredients`/`steps`/`tips` ordered by `sort_order` via `referencedTable`, + `audio_urls(url)`). Only the fields the screen uses are selected. `mapRecipe` remains the single mapper (list + detail); `audioUrl` is resolved from the embedded `audio_urls` row and the dead `recipes.audio_url` mapping was removed (that column does not exist).
+- **Missing vs error** — `PGRST116` (no row) now resolves to **`null`** (a real "not found"), while any other Supabase error is **thrown** so React Query surfaces `isError`. **Notable fix:** React Query v5 forbids a query function returning `undefined`; the previous `undefined` return for a missing recipe was throwing internally and mis-reporting "not found" as a query error. Verified via CDP fault injection.
+
+### 3.2 Loading / empty / error behavior (reusing existing styles only)
+
+- **Home list:** loading spinner; localized error copy + retry button (`refetch`, reusing the existing chip style); honest empty state when the catalog is legitimately empty.
+- **Recipe Detail:** loading spinner; **missing** state ("الوصفة مش موجودة" + body) with the real back affordance; **query-error** state with retry; and honest per-tab empty messaging (no ingredients/steps/tips) instead of blank tabs.
+- No fake/fallback recipe data anywhere.
+
+### 3.3 Navigation integrity
+
+All four surfaces pass the canonical Supabase id into `RecipeDetail` and `useRecipe(id)` resolves it: Home hero (okra), Home feed card (molokhia), Search result (koshary), Favorites result (okra). A missing id resolves to the honest not-found state; a failing query resolves to the error+retry state.
+
+### 3.4 Validation
+
+- `npm run typecheck` → exit 0.
+- **Web E2E (headless Edge over CDP, 390×844, live Supabase): 17/17 PASS**, including: 10-recipe catalog; order stable across reloads; hero/feed/search/favorites → Detail all resolve the correct recipe; favorite behavior intact; empty tabs honest; missing-id → not-found (no crash); query-error → error + retry recovery; **0 console/runtime errors** (including fault-injection).
+- **Supabase request behavior:** Recipe Detail = **1 GET** (embedded) per navigation; Home list = 1 GET bounded by `LIMIT 100`. No duplicate detail requests; child tables are no longer queried separately.
+
+### 3.5 Remaining / deferred
+
+- Search still filters the loaded list client-side (Phase 5 owns server FTS).
+- Favorites remain in-memory (Phase 4).
+- React Query cache defaults (`staleTime`, focus refetch) left as-is per the task; Phase 9 tunes them.
+- `image_url` mapped but still NULL in the catalog; cards/detail fall back to the existing placeholders.

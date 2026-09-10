@@ -15,7 +15,6 @@ const mapRecipe = (r: any): Recipe => ({
   difficulty: r.difficulty ?? 'سهلة',
   rating: r.rating ?? undefined,
   audioAvailable: r.audio_available ?? false,
-  audioUrl: r.audio_url ?? undefined,
   occasion: r.occasion ?? undefined,
   categoryColor: r.category_color ?? 'olive',
 });
@@ -40,6 +39,11 @@ const assertCatalogIds = (recipes: Recipe[]) => {
 
 // ─── Recipes list ──────────────────────────────────────────────────────────────
 
+// Upper bound for the list query. The catalog is ~10 rows today and targets
+// 50–100; a plain limit keeps the query bounded without inventing pagination
+// (Phase 9 owns broader list performance work).
+const RECIPES_LIST_LIMIT = 100;
+
 export const useRecipes = () =>
   useQuery<Recipe[]>({
     queryKey: ['recipes'],
@@ -50,7 +54,8 @@ export const useRecipes = () =>
           'id, title, subtitle, description, image_url, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color'
         )
         .order('sort_order', { ascending: true })
-        .order('id', { ascending: true });
+        .order('id', { ascending: true })
+        .limit(RECIPES_LIST_LIMIT);
 
       if (error) {
         console.error('Supabase recipes error:', error);
@@ -66,38 +71,51 @@ export const useRecipes = () =>
 // ─── Recipe detail ─────────────────────────────────────────────────────────────
 
 export const useRecipe = (id: string) =>
-  useQuery<RecipeDetail | undefined>({
+  useQuery<RecipeDetail | null>({
     queryKey: ['recipe', id],
     queryFn: async () => {
-      const [recipeRes, ingredientsRes, stepsRes, tipsRes, audioRes] = await Promise.all([
-        supabase.from('recipes').select('*').eq('id', id).single(),
-        supabase.from('ingredients').select('*').eq('recipe_id', id).order('sort_order'),
-        supabase.from('steps').select('*').eq('recipe_id', id).order('sort_order'),
-        supabase.from('tips').select('*').eq('recipe_id', id).order('sort_order'),
-        supabase.from('audio_urls').select('url').eq('recipe_id', id).single(),
-      ]);
+      // One embedded request: the recipe, its ordered children, and the
+      // narration URL. Embedded reads rely on the Phase 1 SELECT policies on
+      // every table; a missing policy would silently drop child rows.
+      const { data, error } = await supabase
+        .from('recipes')
+        .select(
+          'id, title, subtitle, description, image_url, category, category_color, minutes, persons, difficulty, rating, audio_available, occasion, ingredients(id, text), steps(id, title, body, image_hint), tips(id, title, body), audio_urls(url)'
+        )
+        .eq('id', id)
+        .order('sort_order', { referencedTable: 'ingredients', ascending: true })
+        .order('sort_order', { referencedTable: 'steps', ascending: true })
+        .order('sort_order', { referencedTable: 'tips', ascending: true })
+        .single();
 
-      if (recipeRes.error || !recipeRes.data) {
-        if (__DEV__) {
-          console.warn(`[nav] RecipeDetail id "${id}" did not resolve in the Supabase catalog`);
+      if (error) {
+        // PGRST116 = no row for this id → the recipe simply does not exist.
+        // Anything else is a real query failure and is surfaced to the screen.
+        if (error.code === 'PGRST116') {
+          if (__DEV__) {
+            console.warn(`[nav] RecipeDetail id "${id}" did not resolve in the Supabase catalog`);
+          }
+          // React Query v5 rejects `undefined` as query data, so a missing
+          // recipe resolves to `null` (distinct from a thrown query error).
+          return null;
         }
-        return undefined;
+        throw error;
       }
 
-      const r = recipeRes.data;
-      const mappedBase = mapRecipe(r);
+      const r: any = data;
+      if (!r) return null;
 
       return {
-        ...mappedBase,
-        ingredients: (ingredientsRes.data ?? []).map((i) => ({ id: i.id, text: i.text })),
-        steps: (stepsRes.data ?? []).map((s) => ({
+        ...mapRecipe(r),
+        ingredients: (r.ingredients ?? []).map((i: any) => ({ id: i.id, text: i.text })),
+        steps: (r.steps ?? []).map((s: any) => ({
           id: s.id,
           title: s.title,
           body: s.body,
           imageHint: s.image_hint ?? undefined,
         })),
-        tips: (tipsRes.data ?? []).map((t) => ({ id: t.id, title: t.title, body: t.body })),
-        audioUrl: audioRes.data?.url ?? mappedBase.audioUrl ?? undefined,
+        tips: (r.tips ?? []).map((tp: any) => ({ id: tp.id, title: tp.title, body: tp.body })),
+        audioUrl: r.audio_urls?.[0]?.url ?? undefined,
       };
     },
     enabled: Boolean(id),

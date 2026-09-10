@@ -148,7 +148,7 @@ export default function RecipeDetailScreen() {
   const navigation = useNavigation<any>();
   const { id } = route.params;
 
-  const { data: recipe, isLoading, isError } = useRecipe(id);
+  const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { has, toggle } = useFavorites();
 
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
@@ -191,13 +191,28 @@ export default function RecipeDetailScreen() {
     );
   }
 
+  // Missing recipe (valid id that is not in the catalog) and query failure are
+  // distinct, honest states. Both keep the real back affordance; only the
+  // failure state offers a retry.
   if (isError || !recipe) {
+    const missing = !isError;
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>حدث خطأ في تحميل الوصفة</Text>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>{t.common.back}</Text>
-        </TouchableOpacity>
+      <View style={styles.root}>
+        <View style={styles.headerBar}>
+          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} accessibilityLabel={t.common.back}>
+            <Text style={styles.iconBtnText}>←</Text>
+          </TouchableOpacity>
+          <View style={styles.iconBtn} />
+        </View>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{missing ? t.recipeDetail.notFound : t.recipeDetail.loadError}</Text>
+          {missing ? <Text style={styles.tipBody}>{t.recipeDetail.notFoundBody}</Text> : null}
+          {!missing ? (
+            <TouchableOpacity style={styles.backButton} onPress={() => refetch()} accessibilityRole="button">
+              <Text style={styles.backButtonText}>{t.common.retry}</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
       </View>
     );
   }
@@ -302,36 +317,50 @@ export default function RecipeDetailScreen() {
         {/* Tab Content */}
         {activeTab === 'ingredients' && (
           <View style={styles.tabContent}>
-            <Text style={styles.ingredientsHelper}>{t.recipeDetail.ingredientsHelper}</Text>
-            {checkedCount > 0 && (
-              <Text style={styles.ingredientsCounter}>
-                {t.recipeDetail.ingredientsCounter(checkedCount, totalCount)}
-              </Text>
+            {(recipe.ingredients?.length ?? 0) === 0 ? (
+              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noIngredients}</Text>
+            ) : (
+              <>
+                <Text style={styles.ingredientsHelper}>{t.recipeDetail.ingredientsHelper}</Text>
+                {checkedCount > 0 && (
+                  <Text style={styles.ingredientsCounter}>
+                    {t.recipeDetail.ingredientsCounter(checkedCount, totalCount)}
+                  </Text>
+                )}
+                {recipe.ingredients?.map((ing) => (
+                  <IngredientRow
+                    key={ing.id}
+                    text={ing.text}
+                    checked={checkedIngredients.has(ing.id)}
+                    onToggle={() => toggleIngredient(ing.id)}
+                  />
+                ))}
+              </>
             )}
-            {recipe.ingredients?.map((ing) => (
-              <IngredientRow
-                key={ing.id}
-                text={ing.text}
-                checked={checkedIngredients.has(ing.id)}
-                onToggle={() => toggleIngredient(ing.id)}
-              />
-            ))}
           </View>
         )}
 
         {activeTab === 'steps' && (
           <View style={styles.tabContent}>
-            {recipe.steps?.map((step, i) => (
-              <StepRow key={step.id} number={i + 1} title={step.title} body={step.body} />
-            ))}
+            {(recipe.steps?.length ?? 0) === 0 ? (
+              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noSteps}</Text>
+            ) : (
+              recipe.steps?.map((step, i) => (
+                <StepRow key={step.id} number={i + 1} title={step.title} body={step.body} />
+              ))
+            )}
           </View>
         )}
 
         {activeTab === 'tips' && (
           <View style={styles.tabContent}>
-            {recipe.tips?.map((tip) => (
-              <TipRow key={tip.id} title={tip.title} body={tip.body} />
-            ))}
+            {(recipe.tips?.length ?? 0) === 0 ? (
+              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noTips}</Text>
+            ) : (
+              recipe.tips?.map((tip) => (
+                <TipRow key={tip.id} title={tip.title} body={tip.body} />
+              ))
+            )}
           </View>
         )}
 

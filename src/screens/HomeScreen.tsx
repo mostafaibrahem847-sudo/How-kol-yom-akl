@@ -10,9 +10,10 @@ import AppHeader from '../components/AppHeader';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { data: recipes, isLoading, isError } = useRecipes();
-  const heroRecipe = recipes?.[0];
-  const feedRecipes = recipes?.slice(1) ?? [];
+  const { data: recipes, isLoading, isError, refetch } = useRecipes();
+  const list = recipes ?? [];
+  const heroRecipe = list[0];
+  const feedRecipes = list.slice(1);
 
   return (
     <View style={styles.root}>
@@ -51,9 +52,17 @@ export default function HomeScreen() {
         {isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
         ) : isError ? (
-          <Text style={{ ...typography.body, color: colors.neutralMuted, textAlign: 'center', marginVertical: spacing.xl }}>
-            حدث خطأ في تحميل الوصفات
-          </Text>
+          <View style={{ alignItems: 'center', marginVertical: spacing.xl }}>
+            <Text style={styles.feedSub}>{t.common.loadError}</Text>
+            <TouchableOpacity style={styles.filterChip} onPress={() => refetch()} accessibilityRole="button">
+              <Text style={styles.filterChipText}>{t.common.retry}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : list.length === 0 ? (
+          <View style={{ alignItems: 'center', marginVertical: spacing.xl }}>
+            <Text style={styles.feedHeader}>{t.home.empty}</Text>
+            <Text style={styles.feedSub}>{t.home.emptyBody}</Text>
+          </View>
         ) : (
           <View style={styles.feedGrid}>
             {feedRecipes.map((r) => (
