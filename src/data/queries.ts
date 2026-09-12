@@ -123,25 +123,55 @@ export const useRecipe = (id: string) =>
 
 // ─── Search recipes ────────────────────────────────────────────────────────────
 
-export async function searchRecipes(query: string): Promise<Recipe[]> {
+// Search/filter strategy (Phase 5 decision, backed by a live-DB probe): bounded
+// per-column ILIKE. The Arabic GIN FTS indexes from Phase 1 were probed against
+// the real catalog and matched ZERO rows for every tested term — exact dish
+// names included (كشري, بامية, ملوخية) — so Postgres' 'arabic' FTS config is
+// unusable for this colloquial content without a schema/RPC change, which this
+// phase forbids. ILIKE substring matching handles what recipe search actually
+// needs (ملوخ → ملوخية, شاميل → بشاميل). Every query below is bounded by
+// order + RECIPES_LIST_LIMIT; user input is escaped before reaching a filter.
+export async function searchRecipes(query: string, category?: string | null): Promise<Recipe[]> {
   const trimmed = query.trim();
-  if (!trimmed) return [];
+  const activeCategory = category?.trim() || null;
+  if (!trimmed && !activeCategory) return [];
 
   // Escape Postgres LIKE/ILIKE wildcards (default escape char is backslash) so
   // user input is matched literally instead of acting as a search pattern.
-  const escaped = trimmed.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-  const pattern = `%${escaped}%`;
+  const pattern = trimmed ? `%${trimmed.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%` : null;
 
   const cols =
-    'id, title, subtitle, description, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color';
+    'id, title, subtitle, description, image_url, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color';
 
-  // Parameterized per-column ILIKE filters (no user string interpolated into a
-  // raw .or() filter). Three parallel queries keep OR semantics: title matches
-  // first, then description, then category; results are deduped by id.
+  // Parameterized per-column filters (no user string interpolated into a raw
+  // .or() filter). With a search term, three parallel queries keep OR semantics
+  // across title/description/category; results are deduped by id below.
+  const searchQuery = (ilikeColumn?: 'title' | 'description' | 'category') => {
+    let q = supabase.from('recipes').select(cols);
+    if (activeCategory) q = q.eq('category', activeCategory);
+    if (pattern && ilikeColumn) q = q.ilike(ilikeColumn, pattern);
+    return q
+      .order('sort_order', { ascending: true })
+      .order('id', { ascending: true })
+      .limit(RECIPES_LIST_LIMIT);
+  };
+
+  if (!pattern) {
+    // Category-only filter: one bounded server-side query.
+    const { data, error } = await searchQuery();
+    if (error) {
+      console.error('Supabase category filter error:', error);
+      throw error;
+    }
+    const recipes = (data ?? []).map(mapRecipe);
+    assertCatalogIds(recipes);
+    return recipes;
+  }
+
   const [byTitle, byDescription, byCategory] = await Promise.all([
-    supabase.from('recipes').select(cols).ilike('title', pattern),
-    supabase.from('recipes').select(cols).ilike('description', pattern),
-    supabase.from('recipes').select(cols).ilike('category', pattern),
+    searchQuery('title'),
+    searchQuery('description'),
+    searchQuery('category'),
   ]);
 
   for (const res of [byTitle, byDescription, byCategory]) {
@@ -162,5 +192,61 @@ export async function searchRecipes(query: string): Promise<Recipe[]> {
     }
   }
 
-  return rows.map(mapRecipe);
+  const recipes = rows.map(mapRecipe);
+  assertCatalogIds(recipes);
+  return recipes;
 }
+
+// ─── Server-side search hook ───────────────────────────────────────────────────
+
+// Search/filter results for the Search screen. Disabled while there is nothing
+// to filter by: the empty-search state reuses the shared ['recipes'] catalog
+// cache instead, so no request fires for the idle screen and no catalog copy is
+// downloaded just to filter it. Distinct term/category combinations get distinct
+// keys; React Query keys also neutralize out-of-order responses (a stale result
+// can never overwrite a newer term's cache entry).
+export const useRecipeSearch = (
+  query: string,
+  category: string | null,
+  options?: { enabled?: boolean },
+) =>
+  useQuery<Recipe[]>({
+    queryKey: ['recipes', 'search', { q: query.trim(), category: category ?? 'all' }],
+    queryFn: () => searchRecipes(query, category),
+    enabled: options?.enabled ?? true,
+  });
+
+// ─── Recipe categories ─────────────────────────────────────────────────────────
+
+// Distinct canonical category values for the Search filter chips — derived from
+// the recipes table itself, not a hard-coded list. Only the single category
+// column is fetched (a metadata query, not a catalog download), ordered by the
+// catalog's curated sort_order so the chip row is stable.
+export const useRecipeCategories = () =>
+  useQuery<string[]>({
+    queryKey: ['recipe-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('category')
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true })
+        .limit(RECIPES_LIST_LIMIT);
+
+      if (error) {
+        console.error('Supabase categories error:', error);
+        throw error;
+      }
+
+      const seen = new Set<string>();
+      const categories: string[] = [];
+      for (const row of data ?? []) {
+        const category = (row as { category?: string | null }).category?.trim();
+        if (category && !seen.has(category)) {
+          seen.add(category);
+          categories.push(category);
+        }
+      }
+      return categories;
+    },
+  });

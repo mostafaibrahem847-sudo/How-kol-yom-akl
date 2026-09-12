@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, FlatList, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
-import { useRecipes } from '../data/queries';
+import { useRecipes, useRecipeCategories, useRecipeSearch } from '../data/queries';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { toArabicNumerals } from '../i18n/numerals';
 import RecipeCard from '../components/RecipeCard';
 import AppHeader from '../components/AppHeader';
@@ -15,13 +16,28 @@ export default function SearchScreen() {
   const navigation = useNavigation<any>();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Single authoritative catalog: the same cached useRecipes() result Home uses.
-  // Search still filters that loaded set client-side (real server search is Phase 5).
-  const { data: recipes, isLoading, isError } = useRecipes();
-  const results = (recipes ?? []).filter((r) =>
-    r.title.includes(query) || r.description.includes(query) || r.category.includes(query)
-  );
+  // Keystrokes settle for 300ms before a request goes out; the input itself
+  // stays fully controlled and instant.
+  const debouncedQuery = useDebouncedValue(query.trim(), 300);
+
+  // Empty search + no category = the shared cached catalog (the exact same
+  // ['recipes'] query Home uses — no extra request, nothing filtered in JS).
+  const catalogQuery = useRecipes();
+
+  // Chip labels are the catalog's own canonical category values (Supabase).
+  const categoriesQuery = useRecipeCategories();
+
+  // Any active constraint (term or category) switches to server-side search;
+  // the search query stays disabled otherwise, so the idle screen never fires
+  // search requests.
+  const isFiltering = debouncedQuery.length > 0 || selectedCategory !== null;
+  const searchQuery = useRecipeSearch(debouncedQuery, selectedCategory, { enabled: isFiltering });
+
+  const activeQuery = isFiltering ? searchQuery : catalogQuery;
+  const results = activeQuery.data ?? [];
+  const { isLoading, isError, refetch } = activeQuery;
 
   return (
     <View style={styles.root}>
@@ -53,25 +69,55 @@ export default function SearchScreen() {
           <Text style={styles.voiceChipText}>🎙️ {t.search.voice}</Text>
         </TouchableOpacity>
 
-        {/* Filter chips */}
+        {/* Filter chips — canonical categories from Supabase + "الكل" */}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {Object.entries(t.search.filters).map(([key, label]) => (
-            <TouchableOpacity key={key} style={styles.filterChip} activeOpacity={0.8}>
-              <Text style={styles.filterChipText}>{label}</Text>
-            </TouchableOpacity>
-          ))}
+          {[t.search.filters.all, ...(categoriesQuery.data ?? [])].map((label) => {
+            const isAllChip = label === t.search.filters.all;
+            const isActive = isAllChip ? selectedCategory === null : selectedCategory === label;
+            return (
+              <TouchableOpacity
+                key={label}
+                style={[styles.filterChip, isActive && styles.filterChipActive]}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isActive }}
+                onPress={() => setSelectedCategory(isAllChip || isActive ? null : label)}
+              >
+                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </ScrollView>
 
-        {/* Results count */}
-        {query.length > 0 && (
+        {/* Results count (hidden while the query is in the error state —
+            "found 0" would read as a real answer next to the error message) */}
+        {isFiltering && !isError && (
           <Text style={styles.resultsLabel}>{t.search.resultsLabel(results.length)}</Text>
         )}
 
-        {/* Results grid */}
+        {/* Results: loading / error+retry / no-results / empty catalog / grid */}
         {isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
         ) : isError ? (
-          <Text style={styles.emptyText}>حدث خطأ في تحميل الوصفات</Text>
+          <View style={{ alignItems: 'center', marginVertical: spacing.xl }}>
+            <Text style={styles.emptyText}>{t.common.loadError}</Text>
+            <TouchableOpacity style={styles.filterChip} onPress={() => refetch()} accessibilityRole="button">
+              <Text style={styles.filterChipText}>{t.common.retry}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : results.length === 0 && isFiltering ? (
+          <Text style={styles.emptyText}>
+            {debouncedQuery
+              ? `ما لاقيناش وصفة بـ "${debouncedQuery}"`
+              : `ما لاقيناش وصفة في "${selectedCategory}"`}
+          </Text>
+        ) : results.length === 0 ? (
+          <View style={{ alignItems: 'center', marginVertical: spacing.xl }}>
+            <Text style={styles.emptyTitle}>{t.home.empty}</Text>
+            <Text style={styles.emptyText}>{t.home.emptyBody}</Text>
+          </View>
         ) : (
           <View style={styles.resultsGrid}>
             {results.map((r) => (
@@ -83,10 +129,6 @@ export default function SearchScreen() {
               </View>
             ))}
           </View>
-        )}
-
-        {!isLoading && !isError && results.length === 0 && query.length > 0 && (
-          <Text style={styles.emptyText}>ما لاقيناش وصفة بـ "{query}"</Text>
         )}
 
         {/* Encouragement */}
@@ -159,10 +201,15 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterChipText: { ...typography.label, color: colors.neutralMid },
+  // Selected chip: same shape, primary fill — mirrors the app's existing
+  // active-pill language (FavoritesScreen pillActive).
+  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  filterChipTextActive: { color: colors.white },
   resultsLabel: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.md },
   resultsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
   cardWrapper: { width: '48%' },
   emptyText: { ...typography.bodyLarge, color: colors.neutralMuted, textAlign: 'center', marginVertical: spacing.xl },
+  emptyTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm, textAlign: 'center' },
   encourageBox: { backgroundColor: colors.secondaryLight, borderRadius: 12, padding: spacing.lg, marginTop: spacing.lg },
   encourageTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
   encourageBody: { ...typography.body, color: colors.neutralMid, marginBottom: spacing.md },
