@@ -166,7 +166,7 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
           )}
 
           {/* Faint warm tint for legibility over the photo */}
-          <View style={styles.imageOverlayFaint} pointerEvents="none" />
+          <View style={styles.imageOverlayFaint} />
 
           {/* Favorite heart over the image area */}
           <TouchableOpacity
@@ -185,7 +185,7 @@ export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'd
 
           {/* Audio indicator */}
           {recipe.audioAvailable && (
-            <View style={styles.audioBadgeSmall} pointerEvents="none">
+            <View style={styles.audioBadgeSmall}>
               <MaterialCommunityIcons name="microphone" size={10} color={colors.white} />
             </View>
           )}
@@ -297,6 +297,7 @@ const styles = StyleSheet.create({
   imageOverlayFaint: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(212,167,129,0.08)',
+    pointerEvents: 'none',
   },
   favBtn: {
     position: 'absolute',
@@ -321,6 +322,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    pointerEvents: 'none',
   },
   // Compact-card scaling: the default card renders inside a ~half-screen grid
   // column, so every internal measure is proportionally reduced relative to

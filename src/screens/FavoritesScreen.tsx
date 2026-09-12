@@ -41,17 +41,17 @@ export default function FavoritesScreen() {
           <Text style={styles.title}>{t.favorites.title}</Text>
           <Text style={styles.subtitle}>{t.favorites.subtitle}</Text>
           <View style={styles.pillRow}>
-            <TouchableOpacity style={[styles.pill, styles.pillActive]}>
+            <TouchableOpacity style={[styles.pill, styles.pillActive]} hitSlop={{ top: 4, bottom: 4 }}>
               <Text style={[styles.pillText, styles.pillTextActive]}>{t.favorites.filters.all}</Text>
               <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count}</Text></View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pill}>
+            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
               <Text style={styles.pillText}>{t.favorites.filters.tried}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pill}>
+            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
               <Text style={styles.pillText}>{t.favorites.filters.wantToTry}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.pill}>
+            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
               <Text style={styles.pillText}>{t.favorites.filters.eidSweets}</Text>
             </TouchableOpacity>
           </View>
@@ -126,7 +126,7 @@ const styles = StyleSheet.create({
   favoriteBadge: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, backgroundColor: colors.neutralSurface, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: 9999, alignSelf: 'flex-start', marginBottom: spacing.md },
   favoriteBadgeIcon: { fontSize: 16, lineHeight: 16 },
   favoriteBadgeText: { ...typography.labelSm, fontWeight: '700', color: colors.primary },
-  title: { ...typography.headlineMd, fontWeight: '700', color: colors.neutralDark, marginBottom: spacing.sm },
+  title: { ...typography.headlineSm, fontWeight: '700', color: colors.neutralDark, marginBottom: spacing.sm },
   subtitle: { ...typography.bodyMedium, fontWeight: '500', color: colors.neutralMid, marginBottom: spacing.md, lineHeight: 24 },
   pillRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 9999, backgroundColor: colors.neutralSurface },
@@ -165,5 +165,5 @@ const styles = StyleSheet.create({
   ctaText: { ...typography.headlineSm, fontWeight: '700', color: colors.white },
   resultsCount: { ...typography.bodyMedium, fontWeight: '500', color: colors.neutralMid, marginBottom: spacing.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
-  cardWrapper: { width: '48%' },
+  cardWrapper: { width: '47.5%' },
 });

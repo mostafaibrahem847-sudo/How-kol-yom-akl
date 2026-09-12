@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   feedHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
   feedSub: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.lg },
   feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
-  cardWrapper: { width: '48%' },
+  cardWrapper: { width: '47.5%' },
   fixedHeader: {
     position: 'absolute',
     top: 0,

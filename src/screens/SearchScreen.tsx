@@ -79,6 +79,7 @@ export default function SearchScreen() {
                 key={label}
                 style={[styles.filterChip, isActive && styles.filterChipActive]}
                 activeOpacity={0.8}
+                hitSlop={{ top: 5, bottom: 5 }}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isActive }}
                 onPress={() => setSelectedCategory(isAllChip || isActive ? null : label)}
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   filterChipTextActive: { color: colors.white },
   resultsLabel: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.md },
   resultsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
-  cardWrapper: { width: '48%' },
+  cardWrapper: { width: '47.5%' },
   emptyText: { ...typography.bodyLarge, color: colors.neutralMuted, textAlign: 'center', marginVertical: spacing.xl },
   emptyTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm, textAlign: 'center' },
   encourageBox: { backgroundColor: colors.secondaryLight, borderRadius: 12, padding: spacing.lg, marginTop: spacing.lg },

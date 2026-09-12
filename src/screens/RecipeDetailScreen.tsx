@@ -179,10 +179,6 @@ export default function RecipeDetailScreen() {
     } catch {}
   };
 
-  const handleStartCooking = () => {
-    navigation.navigate('CookingMode', { id });
-  };
-
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -291,11 +287,6 @@ export default function RecipeDetailScreen() {
             </>
           ) : null}
         </View>
-
-        {/* CTA: Start cooking */}
-        <TouchableOpacity style={styles.ctaButton} onPress={handleStartCooking} activeOpacity={0.85}>
-          <Text style={styles.ctaButtonText}>{t.recipeDetail.startVoice}</Text>
-        </TouchableOpacity>
 
         {/* Tab bar */}
         <View style={styles.tabBar}>
@@ -412,8 +403,8 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radius.medium,
     backgroundColor: 'rgba(253,251,247,0.9)',
     justifyContent: 'center',
@@ -468,18 +459,6 @@ const styles = StyleSheet.create({
   statValue: { ...typography.label, color: colors.neutralDark },
   statLabel: { ...typography.bodySmall, color: colors.neutralMuted },
   statDivider: { width: 1, height: 32, backgroundColor: colors.border },
-
-  ctaButton: {
-    marginHorizontal: screenPadding.horizontal,
-    backgroundColor: colors.primary,
-    borderRadius: buttonSize.height / 2,
-    height: buttonSize.height,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
-    ...elevation.primary,
-  },
-  ctaButtonText: { ...typography.buttonLarge, color: colors.white },
 
   tabBar: {
     flexDirection: 'row',

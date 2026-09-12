@@ -9,7 +9,6 @@ import SearchScreen from '../screens/SearchScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
-import CookingModeScreen from '../screens/CookingModeScreen';
 import { colors, radius, typography, elevation } from '../theme';
 import { t } from '../i18n/strings';
 
@@ -100,7 +99,6 @@ function MainTabs() {
 export type RootStackParamList = {
   Tabs: undefined;
   RecipeDetail: { id: string };
-  CookingMode: { id: string };
 };
 
 export default function RootNavigator() {
@@ -114,7 +112,6 @@ export default function RootNavigator() {
     >
       <Stack.Screen name="Tabs" component={MainTabs} />
       <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
-      <Stack.Screen name="CookingMode" component={CookingModeScreen} />
     </Stack.Navigator>
   );
 }
