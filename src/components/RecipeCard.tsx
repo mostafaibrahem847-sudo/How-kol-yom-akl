@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet, Dimensions, LayoutChangeEvent } from 'react-native';
+import React from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Feather from '@expo/vector-icons/Feather';
 import {
@@ -7,11 +7,9 @@ import {
   spacing,
   typography,
   elevation,
-  buttonSize,
   radius,
   fontWeight,
   fontFamily,
-  screenPadding,
 } from '../theme';
 import { Recipe } from '../types/recipe';
 import CategoryChip from './CategoryChip';
@@ -19,23 +17,13 @@ import { toArabicNumerals } from '../i18n/numerals';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
 
-const { width } = Dimensions.get('window');
-const CARD_MAX_WIDTH = Math.min(width - spacing.lg * 2, 280);
-
-// Compact horizontal-tile sizing.
-// The card NEVER derives its height from the image: the height is computed
-// from the measured grid-cell width, and the image half simply fills it. The
-// ratio + clamp keep it a deliberate compact tile on 360-390px phones while
-// stopping an image's intrinsic dimensions from stretching the card.
-const CARD_RATIO = 0.78;
-const CARD_MIN_HEIGHT = 136;
-const CARD_MAX_HEIGHT = 184;
-const FALLBACK_CELL_WIDTH = Math.max(
-  120,
-  (width - screenPadding.horizontal * 2 - spacing.md) / 2
-);
-const cardHeightForWidth = (w: number) =>
-  Math.round(Math.min(Math.max(w * CARD_RATIO, CARD_MIN_HEIGHT), CARD_MAX_HEIGHT));
+// Full-width list card. A fixed height keeps every row uniform and stops any
+// image's intrinsic dimensions from stretching the layout; the 40% image half
+// leaves the content side wide enough for Arabic titles to breathe on one or
+// two lines instead of cramming into a half-screen column.
+const CARD_HEIGHT = 116;
+// Shared cap so the hero and list cards share one width on wide viewports.
+const CARD_WIDE_MAX = 520;
 
 type Props = {
   recipe: Recipe;
@@ -47,21 +35,6 @@ export default function RecipeCard({ recipe, onPress, variant = 'default' }: Pro
   const isHero = variant === 'hero';
   const isFavorite = useFavorites((s) => s.favorites.has(recipe.id));
   const toggleFavorite = useFavorites((s) => s.toggle);
-
-  // Responsive scale: the default card sits in a ~half-screen grid column. On
-  // narrow phones every measure stays compact; once the content half gets real
-  // width (larger phones / tablet / web) the card steps up to the roomier scale
-  // and the difficulty label is shown beside the time (it only fits then).
-  const [roomy, setRoomy] = useState(false);
-  // Measured width of the actual grid cell this card was placed in. Drives the
-  // controlled height so two cards in a row always match and intrinsic image
-  // dimensions can never influence the layout.
-  const [cardWidth, setCardWidth] = useState(FALLBACK_CELL_WIDTH);
-
-  const handleCardLayout = (e: LayoutChangeEvent) => {
-    const w = e.nativeEvent.layout.width;
-    if (w > 0 && Math.abs(w - cardWidth) > 1) setCardWidth(w);
-  };
 
   if (isHero) {
     return (
@@ -134,25 +107,19 @@ export default function RecipeCard({ recipe, onPress, variant = 'default' }: Pro
     );
   }
 
-  const cardHeight = cardHeightForWidth(cardWidth);
-
   return (
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.85}
-      onLayout={handleCardLayout}
-      style={[styles.card, styles.cardDefault, { height: cardHeight }]}
+      style={[styles.card, styles.cardDefault, { height: CARD_HEIGHT }]}
     >
       {/*
-        Balanced 50/50 row, compact-scaled for a ~half-screen grid column. The
-        app is RTL-only: in a flexDirection:'row' container the FIRST child
-        (the image) is laid out on the RIGHT half and the content follows on
-        the LEFT half — no row-reverse needed. Everything inside is scaled
-        down from the wide standalone concept so it reads as a deliberately
-        compact card rather than a squeezed desktop card.
+        Horizontal 40/60 split. The app is RTL-only: in a flexDirection:'row'
+        container the FIRST child (the image) is laid out on the RIGHT and the
+        content follows on the LEFT — no row-reverse needed.
       */}
       <View style={styles.cardRow}>
-        {/* IMAGE half — physically the right half of the card */}
+        {/* IMAGE half — physically the right side of the card */}
         <View style={styles.imageHalf}>
           {recipe.imageUrl ? (
             <Image source={{ uri: recipe.imageUrl }} style={styles.image} resizeMode="cover" />
@@ -177,7 +144,7 @@ export default function RecipeCard({ recipe, onPress, variant = 'default' }: Pro
           >
             <MaterialCommunityIcons
               name={isFavorite ? 'heart' : 'heart-outline'}
-              size={roomy ? 18 : 16}
+              size={17}
               color={colors.primary}
             />
           </TouchableOpacity>
@@ -190,51 +157,41 @@ export default function RecipeCard({ recipe, onPress, variant = 'default' }: Pro
           )}
         </View>
 
-        {/* CONTENT half — physically the left half of the card */}
-          <View
-            style={[styles.contentHalf, roomy && styles.contentHalfRoomy]}
-            onLayout={(e) => setRoomy(e.nativeEvent.layout.width >= 120)}
-          >
-          <View style={styles.chipClip}>
+        {/* CONTENT half — physically the left side of the card */}
+        <View style={styles.contentHalf}>
+          <View style={styles.chipRow}>
             <CategoryChip label={recipe.category} color={recipe.categoryColor ?? 'olive'} dense />
           </View>
 
-          <Text style={[styles.cardTitle, roomy && styles.cardTitleRoomy]} numberOfLines={2}>
+          <Text style={styles.cardTitle} numberOfLines={2}>
             {recipe.title}
           </Text>
 
-          {/* Time + (when it fits) difficulty — always a single clean line. */}
+          <View style={styles.spacer} />
+
+          {/* Meta line: time · servings · difficulty */}
           <View style={styles.metaRow}>
-            <Feather name="clock" size={roomy ? 11 : 10} color={colors.neutralMuted} />
-            <Text style={[styles.metaText, roomy && styles.metaTextRoomy]} numberOfLines={1}>
+            <Feather name="clock" size={12} color={colors.neutralMuted} />
+            <Text style={styles.metaText} numberOfLines={1}>
               {toArabicNumerals(recipe.minutes)} {t.common.minutes}
             </Text>
-            {roomy && recipe.difficulty ? (
+            {recipe.persons ? (
               <>
                 <Text style={styles.metaDot}>·</Text>
-                <Text style={[styles.metaDifficulty, roomy && styles.metaTextRoomy]} numberOfLines={1}>
+                <Text style={styles.metaText} numberOfLines={1}>
+                  {toArabicNumerals(recipe.persons)} {t.common.persons}
+                </Text>
+              </>
+            ) : null}
+            {recipe.difficulty ? (
+              <>
+                <Text style={styles.metaDot}>·</Text>
+                <Text style={styles.metaText} numberOfLines={1}>
                   {recipe.difficulty}
                 </Text>
               </>
             ) : null}
           </View>
-
-          {recipe.description ? (
-            <Text style={[styles.cardDesc, roomy && styles.cardDescRoomy]} numberOfLines={1}>
-              {recipe.description}
-            </Text>
-          ) : null}
-
-          <View style={styles.spacer} />
-
-          <TouchableOpacity
-            onPress={onPress}
-            style={[styles.ctaCompact, roomy && styles.ctaCompactRoomy]}
-            activeOpacity={0.8}
-            hitSlop={{ top: 4, bottom: 4, left: 0, right: 0 }}
-          >
-            <Text style={[styles.ctaCompactText, roomy && styles.ctaTextRoomy]}>{t.recipeCard.cook}</Text>
-          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -251,16 +208,18 @@ const styles = StyleSheet.create({
   },
   heroCard: {
     width: '100%',
-    maxWidth: CARD_MAX_WIDTH,
+    maxWidth: CARD_WIDE_MAX,
   },
 
-  // ---------- default (horizontal, balanced 50/50) ----------
+  // ---------- default (full-width horizontal, 40/60) ----------
   cardDefault: {
     borderWidth: 1,
     borderColor: colors.border,
     // Grids provide vertical spacing via `gap`; the base card margin would
-    // double it (24px between rows instead of 12px).
+    // double it.
     marginBottom: 0,
+    // On wide (tablet/web) viewports the card caps and the grid centers it.
+    maxWidth: 520,
   },
   cardRow: {
     flex: 1,
@@ -268,12 +227,11 @@ const styles = StyleSheet.create({
     alignItems: 'stretch',
   },
   imageHalf: {
-    flex: 1,
-    minWidth: 0,
+    width: '40%',
     backgroundColor: colors.neutralSurface,
     // Clip the full-bleed image inside the half — NEVER on the card itself: an
     // Android elevation shadow is clipped when the shadowed view clips its
-    // children. The image half is physically the RIGHT half of the card (RTL
+    // children. The image half is physically the RIGHT side of the card (RTL
     // app), so only its right corners carry the card radius.
     overflow: 'hidden',
     borderTopRightRadius: radius.card,
@@ -290,7 +248,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   imagePlaceholderText: {
-    ...typography.h1,
+    fontFamily,
+    fontSize: 26,
+    lineHeight: 34,
+    fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   imageOverlayFaint: {
@@ -323,91 +284,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     pointerEvents: 'none',
   },
-  // Compact-card scaling: the default card renders inside a ~half-screen grid
-  // column, so every internal measure is proportionally reduced relative to
-  // the wide standalone concept. Micro values (2–6px) intentionally sit below
-  // the 4/8/12 spacing tokens — at this width token gaps would look oversized.
   contentHalf: {
     flex: 1,
     minWidth: 0,
-    paddingHorizontal: 6,
-    paddingVertical: 5,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    justifyContent: 'space-between',
   },
-  chipClip: {
+  chipRow: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
     overflow: 'hidden',
     borderRadius: 4,
-    marginBottom: 2,
   },
   cardTitle: {
     fontFamily,
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: fontWeight.bold,
     color: colors.neutralDark,
-    marginBottom: 2,
+    marginTop: 6,
   },
+  spacer: { flex: 1, minHeight: 6 },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    marginBottom: 2,
+    gap: 4,
   },
   metaText: {
     fontFamily,
-    fontSize: 11,
-    lineHeight: 15,
+    fontSize: 12,
+    lineHeight: 16,
     color: colors.neutralMuted,
     flexShrink: 1,
   },
   metaDot: {
     fontFamily,
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.neutralLight,
-    marginHorizontal: 3,
-  },
-  metaDifficulty: {
-    fontFamily,
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.neutralMuted,
-    flexShrink: 1,
-  },
-  cardDesc: {
-    fontFamily,
-    fontSize: 11,
-    lineHeight: 15,
-    color: colors.neutralMuted,
-    flexShrink: 1,
-    marginBottom: 3,
-  },
-  spacer: { flex: 1, minHeight: 0 },
-  ctaCompact: {
-    height: 28,
-    backgroundColor: colors.primary,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  ctaCompactText: {
-    fontFamily,
     fontSize: 12,
-    lineHeight: 17,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
+    lineHeight: 16,
+    color: colors.neutralLight,
+    marginHorizontal: 2,
   },
-
-  // ---- roomier scale (larger phones / tablet / web columns) ----
-  // Applied as array overrides on top of the compact styles once the content
-  // half measures >= 120px wide, so proportions stay balanced at both sizes.
-  contentHalfRoomy: { paddingHorizontal: 10, paddingVertical: 8 },
-  cardTitleRoomy: { fontSize: 15, lineHeight: 21 },
-  metaTextRoomy: { fontSize: 12, lineHeight: 19 },
-  cardDescRoomy: { fontSize: 12, lineHeight: 19 },
-  ctaCompactRoomy: { height: 34, borderRadius: 8 },
-  ctaTextRoomy: { fontSize: 13, lineHeight: 18 },
 
   // ---------- hero (unchanged vertical layout) ----------
   imageWrap: {
@@ -462,7 +379,7 @@ const styles = StyleSheet.create({
   ctaRow: { flexDirection: 'row', alignItems: 'center' },
   ctaBtn: {
     flex: 1,
-    height: buttonSize.height,
+    height: 48,
     backgroundColor: colors.primary,
     borderRadius: 12,
     alignItems: 'center',

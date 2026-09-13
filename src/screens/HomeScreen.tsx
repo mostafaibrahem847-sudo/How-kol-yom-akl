@@ -109,8 +109,8 @@ const styles = StyleSheet.create({
   filterChipText: { ...typography.label, color: colors.neutralMid },
   feedHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
   feedSub: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.lg },
-  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
-  cardWrapper: { width: '47.5%' },
+  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
+  cardWrapper: { width: '100%' },
   fixedHeader: {
     position: 'absolute',
     top: 0,

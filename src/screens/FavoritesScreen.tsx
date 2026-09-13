@@ -162,6 +162,6 @@ const styles = StyleSheet.create({
   ctaIcon: { fontSize: 20, lineHeight: 20 },
   ctaText: { ...typography.headlineSm, fontWeight: '700', color: colors.white },
   resultsCount: { ...typography.bodyMedium, fontWeight: '500', color: colors.neutralMid, marginBottom: spacing.md },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'flex-start' },
-  cardWrapper: { width: '47.5%' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
+  cardWrapper: { width: '100%' },
 });
