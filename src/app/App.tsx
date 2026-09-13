@@ -8,7 +8,19 @@ import * as Font from 'expo-font';
 import RootNavigator from '../navigation/RootNavigator';
 import { colors } from '../theme';
 
-const queryClient = new QueryClient();
+// Catalog data is small and changes rarely (content edits happen out-of-band).
+// Fresh-for-5-minutes + no focus refetch means tab switches and refocuses serve
+// from cache instead of re-hitting Supabase; mutations of favorites are local
+// (Zustand) and unaffected.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function AppContent() {
   const [fontsLoaded, setFontsLoaded] = useState(false);

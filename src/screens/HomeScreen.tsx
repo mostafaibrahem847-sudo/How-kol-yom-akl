@@ -30,7 +30,6 @@ export default function HomeScreen() {
             <RecipeCard
               recipe={heroRecipe}
               onPress={() => navigation.navigate('RecipeDetail', { id: heroRecipe.id })}
-              onVoicePress={() => console.log('voice', heroRecipe.id)}
               variant="hero"
             />
           </View>
@@ -70,7 +69,6 @@ export default function HomeScreen() {
                 <RecipeCard
                   recipe={r}
                   onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-                  onVoicePress={r.audioAvailable ? () => console.log('voice', r.id) : undefined}
                 />
               </View>
             ))}

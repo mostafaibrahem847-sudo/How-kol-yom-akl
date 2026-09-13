@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
@@ -135,7 +135,6 @@ const styles = StyleSheet.create({
   pillCountText: { ...typography.labelSm, color: colors.white, fontWeight: '700' },
   pillText: { ...typography.buttonLarge, color: colors.neutralDark },
   pillTextActive: { color: colors.white },
-  emptyState: { alignItems: 'center', paddingTop: spacing.xl },
   emptySection: { alignItems: 'center', gap: spacing.md },
   emptyTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: spacing.md },
   emptyTopLabel: { ...typography.label, color: colors.neutralMid, fontWeight: '600' },
@@ -157,7 +156,6 @@ const styles = StyleSheet.create({
   },
   illustrationIcon: { fontSize: 32, lineHeight: 32 },
   emptyContent: { alignItems: 'center', gap: spacing.xs, maxWidth: '90%' },
-  illustrationText: { fontSize: 48 },
   emptyTitle: { ...typography.headlineSm, fontWeight: '700', color: colors.neutralDark, marginBottom: spacing.xs, textAlign: 'center' },
   emptyBody: { ...typography.bodyMedium, fontWeight: '400', color: colors.neutralMuted, textAlign: 'center', lineHeight: 24, marginBottom: spacing.md },
   ctaButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, width: '100%', maxWidth: 280, height: 52, backgroundColor: colors.primary, borderRadius: 16, shadowColor: colors.primaryDark, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 10, elevation: 4 },

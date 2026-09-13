@@ -7,7 +7,6 @@ import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useRecipes, useRecipeCategories, useRecipeSearch } from '../data/queries';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import { toArabicNumerals } from '../i18n/numerals';
 import RecipeCard from '../components/RecipeCard';
 import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
@@ -134,10 +133,10 @@ export default function SearchScreen() {
 
         {/* Encouragement */}
         <View style={styles.encourageBox}>
-          <Text style={styles.encourageTitle}>{t.search.encouragmentTitle}</Text>
-          <Text style={styles.encourageBody}>{t.search.encouragmentBody}</Text>
+          <Text style={styles.encourageTitle}>{t.search.encouragementTitle}</Text>
+          <Text style={styles.encourageBody}>{t.search.encouragementBody}</Text>
           <TouchableOpacity style={styles.encourageCta} activeOpacity={0.85}>
-            <Text style={styles.encourageCtaText}>{t.search.encouragmentCta}</Text>
+            <Text style={styles.encourageCtaText}>{t.search.encouragementCta}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

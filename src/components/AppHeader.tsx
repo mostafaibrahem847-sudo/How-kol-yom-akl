@@ -46,7 +46,6 @@ export default function AppHeader({ indicator }: AppHeaderProps) {
         <TouchableOpacity
           style={styles.headerIconBtn}
           accessibilityLabel={t.common.notifications}
-          onPress={() => console.log('notifications')}
           activeOpacity={0.7}
         >
           <Feather name="bell" size={24} color={colors.neutralMuted} />

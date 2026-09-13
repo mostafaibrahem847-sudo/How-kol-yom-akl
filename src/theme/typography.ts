@@ -1,7 +1,6 @@
 import { TextStyle } from 'react-native';
 
 export const fontFamily = 'Cairo';
-export const fontFamilyFallback = 'Tajawal';
 
 export const fontWeight = {
   regular: '400',
@@ -23,12 +22,6 @@ export const typography = {
     fontSize: 36,
     lineHeight: 43,
     fontWeight: fontWeight.semibold,
-  } as TextStyle,
-  h1Mobile: {
-    fontFamily,
-    fontSize: 20,
-    lineHeight: 38,
-    fontWeight: fontWeight.bold,
   } as TextStyle,
   h2: {
     fontFamily,
@@ -124,13 +117,6 @@ export const elevation = {
     shadowOpacity: 0.22,
     shadowRadius: 24,
     elevation: 8,
-  },
-  audioDock: {
-    shadowColor: '#784620',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.10,
-    shadowRadius: 18,
-    elevation: 12,
   },
   primary: {
     shadowColor: '#9E3D00',

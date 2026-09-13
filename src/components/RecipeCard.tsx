@@ -40,11 +40,10 @@ const cardHeightForWidth = (w: number) =>
 type Props = {
   recipe: Recipe;
   onPress: () => void;
-  onVoicePress?: () => void;
   variant?: 'default' | 'hero';
 };
 
-export default function RecipeCard({ recipe, onPress, onVoicePress, variant = 'default' }: Props) {
+export default function RecipeCard({ recipe, onPress, variant = 'default' }: Props) {
   const isHero = variant === 'hero';
   const isFavorite = useFavorites((s) => s.favorites.has(recipe.id));
   const toggleFavorite = useFavorites((s) => s.toggle);
