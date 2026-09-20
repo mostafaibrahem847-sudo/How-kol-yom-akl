@@ -1,7 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight } from '../theme';
 import { screenPadding } from '../theme/spacing';
@@ -29,9 +28,11 @@ export default function AppHeader({ indicator }: AppHeaderProps) {
       {/* Start group (right in RTL): circular logo at the far start, then the
           app name block (title + screen indicator) beside it. */}
       <View style={styles.headerBrand}>
-        <View style={styles.logoBadge}>
-          <MaterialCommunityIcons name="pot-steam" size={28} color={colors.primary} />
-        </View>
+        <Image
+          source={require('../../assets/images/logo.png')}
+          style={styles.logo}
+          resizeMode="contain"
+        />
         <View style={styles.headerTitleBlock}>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {t.app.name}
@@ -122,12 +123,11 @@ const styles = StyleSheet.create({
     textAlign: 'right',
     width: '100%',
   },
-  logoBadge: {
+  // Official app logo (assets/images/logo.png). Square source displayed in a
+  // square box with `contain`, so proportions are preserved. No background,
+  // border, tint, or crop is applied — the PNG's transparency shows through.
+  logo: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.inputBg,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
