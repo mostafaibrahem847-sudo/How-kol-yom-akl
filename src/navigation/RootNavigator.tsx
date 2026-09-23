@@ -9,6 +9,9 @@ import SearchScreen from '../screens/SearchScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
+import WelcomeScreen from '../screens/WelcomeScreen';
+import SignInScreen from '../screens/SignInScreen';
+import SignUpScreen from '../screens/SignUpScreen';
 import { colors, radius, typography, elevation } from '../theme';
 import { t } from '../i18n/strings';
 
@@ -97,19 +100,26 @@ function MainTabs() {
 }
 
 export type RootStackParamList = {
-  Tabs: undefined;
+  Welcome: undefined;
+  SignIn: undefined;
+  SignUp: undefined;
+  Tabs: { screen?: TabKey } | undefined;
   RecipeDetail: { id: string };
 };
 
 export default function RootNavigator() {
   return (
     <Stack.Navigator
+      initialRouteName="Welcome"
       screenOptions={{
         headerShown: false,
         animation: 'slide_from_right',
         contentStyle: { backgroundColor: colors.secondary },
       }}
     >
+      <Stack.Screen name="Welcome" component={WelcomeScreen} />
+      <Stack.Screen name="SignIn" component={SignInScreen} />
+      <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="Tabs" component={MainTabs} />
       <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
     </Stack.Navigator>

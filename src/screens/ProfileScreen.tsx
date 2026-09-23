@@ -1,6 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import { useAuth, useUser } from '@clerk/expo';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, buttonSize } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
@@ -22,6 +24,22 @@ const SettingRow = ({ icon, label, note }: { icon: FeatherName; label: string; n
 
 export default function ProfileScreen() {
   const { favorites } = useFavorites();
+  const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth();
+  const { user } = useUser();
+  const navigation = useNavigation<any>();
+  const [signingOut, setSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await signOut();
+    } catch {
+      // Sign-out failures are not surfaced; the user can retry.
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <View style={styles.root}>
@@ -33,6 +51,56 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.name}>{t.app.name}</Text>
           <Text style={styles.subtitle}>{t.app.tagline}</Text>
+        </View>
+
+        {/* Account / auth card */}
+        <View style={styles.authCard}>
+          {!authLoaded ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : isSignedIn ? (
+            <View style={styles.authSignedIn}>
+              <Text style={styles.authSignedInLabel}>{t.auth.signedInLabel}</Text>
+              <Text style={styles.authEmail} numberOfLines={1}>
+                {user?.primaryEmailAddress?.emailAddress ?? ''}
+              </Text>
+              <TouchableOpacity
+                style={[styles.authActionBtn, styles.authSignOutBtn, signingOut && styles.authActionBtnDisabled]}
+                onPress={handleSignOut}
+                disabled={signingOut}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+              >
+                {signingOut ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={styles.authSignOutText}>{t.auth.signOut}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.authSignedOut}>
+              <Text style={styles.authSignedOutTitle}>{t.auth.signedOutTitle}</Text>
+              <Text style={styles.authSignedOutBody}>{t.auth.signedOutBody}</Text>
+              <View style={styles.authActions}>
+                <TouchableOpacity
+                  style={[styles.authActionBtn, styles.authPrimaryBtn]}
+                  onPress={() => navigation.navigate('SignIn')}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.authPrimaryText}>{t.auth.signIn}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.authActionBtn, styles.authOutlineBtn]}
+                  onPress={() => navigation.navigate('SignUp')}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.authOutlineText}>{t.auth.signUp}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Stats card */}
@@ -94,6 +162,29 @@ const styles = StyleSheet.create({
   avatarLetter: { ...typography.display, fontSize: 36, color: colors.white },
   name: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.xs },
   subtitle: { ...typography.body, color: colors.neutralMuted },
+  authCard: { backgroundColor: colors.neutralSurface, borderRadius: 12, padding: spacing.lg, marginBottom: spacing.lg },
+  authSignedIn: { alignItems: 'flex-start', gap: spacing.sm },
+  authSignedInLabel: { ...typography.labelSm, color: colors.neutralMuted },
+  authEmail: { ...typography.bodyMedium, color: colors.neutralDark, textAlign: 'right', width: '100%' },
+  authSignOutBtn: { borderWidth: 1, borderColor: colors.primary, alignSelf: 'stretch' },
+  authSignOutText: { ...typography.button, color: colors.primary },
+  authSignedOut: { alignItems: 'flex-start', gap: spacing.sm },
+  authSignedOutTitle: { ...typography.h3, color: colors.neutralDark },
+  authSignedOutBody: { ...typography.bodySmall, color: colors.neutralMuted, textAlign: 'right' },
+  authActions: { flexDirection: 'row', gap: spacing.sm, alignSelf: 'stretch' },
+  authActionBtn: {
+    flex: 1,
+    minHeight: 50,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+  },
+  authActionBtnDisabled: { opacity: 0.9 },
+  authPrimaryBtn: { backgroundColor: colors.primary },
+  authPrimaryText: { ...typography.button, color: colors.white },
+  authOutlineBtn: { borderWidth: 1, borderColor: colors.primary, backgroundColor: colors.secondary },
+  authOutlineText: { ...typography.button, color: colors.primary },
   statsCard: { backgroundColor: colors.neutralSurface, borderRadius: 12, marginBottom: spacing.xl, overflow: 'hidden' },
   statRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   statIcon: { marginRight: spacing.md },

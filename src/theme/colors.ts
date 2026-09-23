@@ -2,6 +2,10 @@ export const colors = {
   primary: '#D35400',
   primaryLight: '#F4A261',
   primaryDark: '#C94F0E',
+  // Deep brand tone for small brand-coloured text/icons. `primary` only reaches
+  // 4.03:1 on the cream surface, which fails WCAG AA for normal-size text; this
+  // tone reaches 6.5:1 and keeps the same warm hue.
+  primaryDeep: '#9E3D00',
   secondary: '#FDFBF7',
   secondaryLight: '#FAF3E0',
   secondaryDark: '#EDE9D0',

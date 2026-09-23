@@ -8,7 +8,8 @@ import { ClerkProvider } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import * as Font from 'expo-font';
 import RootNavigator from '../navigation/RootNavigator';
-import { colors } from '../theme';
+import { colors, ResponsiveProvider, FONT_ASSETS } from '../theme';
+import { APP_LAYOUT_DIRECTION, resolveLayoutDirection } from '../i18n/rtl';
 
 // Catalog data is small and changes rarely (content edits happen out-of-band).
 // Fresh-for-5-minutes + no focus refetch means tab switches and refocuses serve
@@ -25,19 +26,25 @@ const queryClient = new QueryClient({
 });
 
 function AppContent() {
-  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    async function loadFonts() {
-      await Font.loadAsync({
-        Cairo: require('../../assets/fonts/Cairo-Variable.ttf'),
-      });
-      setFontsLoaded(true);
+    async function boot() {
+      // Register every static Cairo weight under its own family name (see
+      // src/theme/typography.ts). Loading the weights separately is what keeps
+      // Web and Native on the same real glyphs instead of each platform's
+      // synthetic bold.
+      await Font.loadAsync(FONT_ASSETS);
+      // Resolve the one shared layout direction before first paint. On native
+      // this may recreate the surface once (see src/i18n/rtl.ts); on web it is
+      // a no-op. Gating here avoids a flash of the wrong direction.
+      await resolveLayoutDirection();
+      setReady(true);
     }
-    loadFonts();
+    boot();
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!ready) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -45,7 +52,10 @@ function AppContent() {
         <NavigationContainer>
           <SafeAreaView style={{ flex: 1, backgroundColor: colors.secondary }} edges={['top', 'left', 'right']}>
             <StatusBar style="dark" />
-            <RootNavigator />
+            {/* One measured responsive frame shared by every screen. */}
+            <ResponsiveProvider>
+              <RootNavigator />
+            </ResponsiveProvider>
           </SafeAreaView>
         </NavigationContainer>
       </SafeAreaProvider>
@@ -53,24 +63,22 @@ function AppContent() {
   );
 }
 
-// Clerk is configured through EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. The provider is
-// only mounted when a key is present so the app keeps launching (with auth
-// disabled) until a Clerk instance is connected. Setting the key in .env mounts
-// ClerkProvider automatically — no further wiring is needed here.
+// Clerk is the active authentication provider, configured through
+// EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY. ClerkProvider is always mounted (no
+// no-auth fallback); the native tokenCache persists the device JWT in
+// expo-secure-store. The key must be set in .env — without it Clerk fails to
+// initialize and surfaces its own error.
 function ClerkAuthProvider({ children }: { children: React.ReactNode }) {
   const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
-  if (!publishableKey) {
-    if (__DEV__) {
-      console.warn(
-        '[clerk] EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is not set. Clerk authentication is disabled; add the key to .env to enable it.',
-      );
-    }
-    return <>{children}</>;
+  if (__DEV__ && !publishableKey) {
+    console.warn(
+      '[clerk] EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY is not set; Clerk will fail to initialize. Add the key to .env.',
+    );
   }
 
   return (
-    <ClerkProvider publishableKey={publishableKey} tokenCache={tokenCache}>
+    <ClerkProvider publishableKey={publishableKey ?? ''} tokenCache={tokenCache}>
       {children}
     </ClerkProvider>
   );
@@ -84,7 +92,7 @@ function RootApp() {
   // The prop is a react-native-web DOM prop; native ignores it entirely.
   if (Platform.OS === 'web') {
     return (
-      <View {...({ dir: 'rtl' } as object)} style={{ flex: 1 }}>
+      <View {...({ dir: APP_LAYOUT_DIRECTION } as object)} style={{ flex: 1 }}>
         <AppContent />
       </View>
     );
