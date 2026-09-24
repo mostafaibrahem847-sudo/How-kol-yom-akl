@@ -120,7 +120,7 @@ const styles = StyleSheet.create({
     ...typography.labelSm,
     color: colors.accent,
     marginTop: 1,
-    textAlign: 'right',
+    textAlign: 'left',
     width: '100%',
   },
   // Official app logo (assets/images/logo.png). Square source displayed in a

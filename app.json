@@ -2,6 +2,7 @@
   "expo": {
     "name": "هو كل يوم أكل",
     "slug": "howa-kol-yom-akl",
+    "scheme": "howakolyomakl",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",

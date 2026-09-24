@@ -8,9 +8,14 @@ import {
   Platform,
   TouchableOpacity,
 } from 'react-native';
-import { useSignIn } from '@clerk/expo';
+import { useSSO } from '@clerk/expo';
+// Email/password uses the legacy Clerk hook contract (`{ isLoaded, signIn,
+// setActive }`) provided by this SDK generation. The top-level hooks return the
+// newer signal value, which this screen's flow is not written against.
+import { useSignIn } from '@clerk/expo/legacy';
 import { useNavigation } from '@react-navigation/native';
 import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, spacing, typography } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
@@ -23,11 +28,13 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 export default function SignInScreen() {
   const navigation = useNavigation<any>();
   const { isLoaded, signIn, setActive } = useSignIn();
+  const { startSSOFlow } = useSSO();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   const handleSubmit = async () => {
     const trimmedEmail = email.trim();
@@ -59,6 +66,32 @@ export default function SignInScreen() {
       setError(clerkErrorMessage(err, 'signIn'));
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    if (googleLoading) return;
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      // Clerk's supported Expo browser SSO flow (expo-web-browser + expo-auth-session).
+      const { createdSessionId, setActive: activateSession, authSessionResult } =
+        await startSSOFlow({ strategy: 'oauth_google' });
+
+      if (createdSessionId && activateSession) {
+        await activateSession({ session: createdSessionId });
+        navigation.replace('Tabs');
+        return;
+      }
+
+      // User closed/dismissed the browser sheet — a cancellation, not an error.
+      if (authSessionResult && authSessionResult.type !== 'success') return;
+
+      setError(t.auth.genericError);
+    } catch (err) {
+      setError(clerkErrorMessage(err, 'signIn'));
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -117,6 +150,21 @@ export default function SignInScreen() {
             loading={submitting}
             onPress={handleSubmit}
           />
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{t.auth.orDivider}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <AuthPrimaryButton
+            label={t.auth.continueWithGoogle}
+            loadingLabel={t.auth.submittingGoogle}
+            loading={googleLoading}
+            onPress={handleGoogle}
+            variant="outline"
+            icon={<MaterialCommunityIcons name="google" size={20} color={colors.primary} />}
+          />
         </View>
 
         <View style={styles.switchRow}>
@@ -162,6 +210,9 @@ const styles = StyleSheet.create({
   },
   form: { gap: spacing.lg },
   error: { ...typography.bodySmall, color: colors.error, textAlign: 'right' },
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
+  dividerText: { ...typography.bodySmall, color: colors.neutralMuted },
   switchRow: {
     flexDirection: 'row',
     alignItems: 'center',

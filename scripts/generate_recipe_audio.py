@@ -117,12 +117,12 @@ def _humanize(text: str) -> str:
 
 
 def build_narration(r: dict) -> str:
-    parts = [f"نورتي مطبخنا يا قمر! النهاردة هنعمل {r['title']}."]
+    parts = [f"نوّرت مطبخنا يا قمر! النهاردة هنعمل {r['title']}."]
     if r["description"]:
         parts.append(r["description"])
     if r["ingredients"]:
         items = "، ".join(_humanize(i) for i in r["ingredients"])
-        parts.append(f"يلا جهزي المكونات معايا: {items}.")
+        parts.append(f"يلا نجهز المكونات مع بعض: {items}.")
     if r["steps"]:
         lines = []
         for i, step in enumerate(r["steps"], start=1):
@@ -130,7 +130,7 @@ def build_narration(r: dict) -> str:
             lines.append(f"{prefix}: {_humanize(step)}.")
         parts.append("دلوقتي خطوات التحضير بالترتيب: " + " ".join(lines))
     if r["tip"]:
-        parts.append(f"ونصيحة أخيرة مني ليكِ: {_humanize(r['tip'])}")
+        parts.append(f"ونصيحة أخيرة مني ليك: {_humanize(r['tip'])}")
     parts.append("وبالهنا والشفا!")
     return "\n\n".join(parts)
 

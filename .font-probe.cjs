@@ -84,10 +84,10 @@ const server = http.createServer(async (req, res) => {
       },
       els: [
         info('eyebrow', leaf(/^مطبخك البيتي اليومي$/)),
-        info('headlineLead', leaf(/^أهلاً بيكي في$/)),
+        info('headlineLead', leaf(/^أهلاً بيك في$/)),
         info('brand', leaf(/^هو كل يوم أكل$/)),
         info('desc', leaf(/وصفات بيتي سهلة/)),
-        info('cta', leaf(/^ابدئي دلوقتي$/)),
+        info('cta', leaf(/^ابدأ دلوقتي$/)),
         info('blessing', leaf(/تسلم إيدك/)),
       ],
     };

@@ -71,7 +71,7 @@
 **Goal:** Complete the 4 tabs.
 
 - [ ] Search screen with input (border `#D35400` active), clear icon, voice search chip
-- [ ] Favorites screen with empty-state illustration + primary CTA ("اكتشفي وصفات")
+- [ ] Favorites screen with empty-state illustration + primary CTA ("اكتشف وصفات")
 - [ ] Profile screen (minimal: favorites count, settings placeholder)
 - [ ] Navigation between tabs (back arrow left in RTL, mirrored layout)
 
@@ -84,7 +84,7 @@
 - [ ] `CookingModeScreen.tsx` (full-screen, `#FDFBF7` bg, `#1A1A1A` text)
 - [ ] Large `h3` step title + `body-large` instruction
 - [ ] Progress circle (12dp, `#D35400` fill for current step)
-- [ ] Voice commands: "الخطوة اللي بعدها", "عيدي تاني"
+- [ ] Voice commands: "الخطوة اللي بعدها", "عيد تاني"
 - [ ] Timer chip (2-minute default timer)
 - [ ] Exit button (primary outline, 48dp)
 

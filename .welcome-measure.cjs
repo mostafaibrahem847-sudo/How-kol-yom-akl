@@ -60,9 +60,9 @@ const server = http.createServer(async (req, res) => {
       .filter((x) => x.s.backgroundImage && x.s.backgroundImage.includes('linear-gradient'))
       .map((x) => ({ bg: x.s.backgroundImage, rect: { x: round(x.r.left), y: round(x.r.top), w: round(x.r.width), h: round(x.r.height) } }));
     const eyebrow = leaf(/^مطبخك البيتي اليومي$/);
-    const lead = leaf(/^أهلاً بيكي في$/);
+    const lead = leaf(/^أهلاً بيك في$/);
     const desc = leaf(/وصفات بيتي سهلة/);
-    const cta = leaf(/^ابدئي دلوقتي$/);
+    const cta = leaf(/^ابدأ دلوقتي$/);
     const login = leaf(/^تسجيل الدخول$/);
     const blessing = leaf(/تسلم إيدك/);
     let card = eyebrow;
