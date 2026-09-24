@@ -2,13 +2,16 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import { colors, spacing, typography, headerHeight } from '../theme';
+import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useRecipes, useRecipeCategories, useRecipeSearch } from '../data/queries';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
-import RecipeCard from '../components/RecipeCard';
+import RecipeCardList from '../components/RecipeCardList';
+import RecipeCardGrid from '../components/RecipeCardGrid';
+import RecipeViewToggle from '../components/RecipeViewToggle';
 import AppHeader from '../components/AppHeader';
+import { useViewMode } from '../state/viewMode';
 import { useNavigation } from '@react-navigation/native';
 
 export default function SearchScreen() {
@@ -16,6 +19,7 @@ export default function SearchScreen() {
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const mode = useViewMode((s) => s.mode);
 
   // Keystrokes settle for 300ms before a request goes out; the input itself
   // stays fully controlled and instant.
@@ -97,6 +101,13 @@ export default function SearchScreen() {
           <Text style={styles.resultsLabel}>{t.search.resultsLabel(results.length)}</Text>
         )}
 
+        {/* View switcher sits right above the first result card */}
+        {!isLoading && !isError && results.length > 0 && (
+          <View style={styles.toolbarRow}>
+            <RecipeViewToggle />
+          </View>
+        )}
+
         {/* Results: loading / error+retry / no-results / empty catalog / grid */}
         {isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
@@ -121,11 +132,21 @@ export default function SearchScreen() {
         ) : (
           <View style={styles.resultsGrid}>
             {results.map((r) => (
-              <View key={r.id} style={styles.cardWrapper}>
-                <RecipeCard
-                  recipe={r}
-                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-                />
+              <View
+                key={r.id}
+                style={mode === 'grid' ? styles.cardWrapperGrid : styles.cardWrapperFull}
+              >
+                {mode === 'grid' ? (
+                  <RecipeCardGrid
+                    recipe={r}
+                    onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                  />
+                ) : (
+                  <RecipeCardList
+                    recipe={r}
+                    onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                  />
+                )}
               </View>
             ))}
           </View>
@@ -206,8 +227,18 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterChipTextActive: { color: colors.white },
   resultsLabel: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.md },
-  resultsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
-  cardWrapper: { width: '100%' },
+  // Toggle aligned to the physical left edge (RTL: flex-end resolves to left).
+  toolbarRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md },
+  resultsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: SINGLE_COLUMN_MAX_WIDTH,
+    alignSelf: 'center',
+  },
+  cardWrapperFull: { width: '100%', marginBottom: spacing.md },
+  cardWrapperGrid: { width: '48%', marginBottom: spacing.md },
   emptyText: { ...typography.bodyLarge, color: colors.neutralMuted, textAlign: 'center', marginVertical: spacing.xl },
   emptyTitle: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm, textAlign: 'center' },
   encourageBox: { backgroundColor: colors.secondaryLight, borderRadius: 12, padding: spacing.lg, marginTop: spacing.lg },

@@ -3,7 +3,7 @@ import { toArabicNumerals } from './numerals';
 export const t = {
   app: {
     name: 'هو كل يوم أكل',
-    tagline: 'وصفاتك مع صوت طنط منى',
+    tagline: 'وصفتك بطعم تاني',
   },
   nav: {
     home: 'الرئيسية',
@@ -71,12 +71,16 @@ export const t = {
       gatherings: 'عزومات',
       beginner: 'للمبتدئين',
     },
-    encouragementTitle: 'نصيحة طنط منى:',
+    encouragementTitle: 'نصيحة ذهبية:',
     encouragementBody: 'مفيش وقت للقراية؟ اضغط على زرار المايك وهنقولك الطريقة خطوة بخطوة وإيدك في العجين!',
     encouragementCta: 'جرّب المساعد الصوتي دلوقتي',
   },
   recipeCard: {
     cook: 'شوف الوصفة',
+  },
+  viewMode: {
+    list: 'عرض كقائمة',
+    grid: 'عرض كشبكة',
   },
   recipeDetail: {
     favoriteAdd: 'أضف للمفضلة',

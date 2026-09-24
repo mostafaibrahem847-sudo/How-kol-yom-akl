@@ -5,7 +5,7 @@ import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
 import { useRecipes } from '../data/queries';
-import RecipeCard from '../components/RecipeCard';
+import RecipeCardList from '../components/RecipeCardList';
 import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
 
@@ -87,7 +87,7 @@ export default function FavoritesScreen() {
             <View style={styles.grid}>
               {favRecipes.map((r) => (
                 <View key={r.id} style={styles.cardWrapper}>
-                  <RecipeCard
+                  <RecipeCardList
                     recipe={r}
                     onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
                   />

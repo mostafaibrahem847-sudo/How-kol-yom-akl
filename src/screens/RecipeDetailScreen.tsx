@@ -406,12 +406,12 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radius.medium,
-    backgroundColor: 'rgba(253,251,247,0.9)',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     ...elevation.cardLifted,
   },
-  iconBtnText: { fontSize: 20, color: colors.primary },
+  iconBtnText: { fontSize: 30, color: colors.primary },
 
   scroll: { paddingBottom: 0 },
 

@@ -44,15 +44,23 @@ const assertCatalogIds = (recipes: Recipe[]) => {
 // (Phase 9 owns broader list performance work).
 const RECIPES_LIST_LIMIT = 100;
 
+// Recipes whose ingredients/steps are not authored yet would open an empty
+// details screen. The embedded `!inner` join drops any recipe with zero
+// ingredients at the source, so Home, Search, Favorites and the category chips
+// stay consistent — and the recipe reappears automatically as soon as its
+// ingredients are added. Rows and audio are never deleted.
+const RECIPE_IDENTITY_COLUMNS =
+  'id, title, subtitle, description, image_url, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color';
+
+const RECIPE_LIST_COLUMNS = `${RECIPE_IDENTITY_COLUMNS}, ingredients!inner(id)`;
+
 export const useRecipes = () =>
   useQuery<Recipe[]>({
     queryKey: ['recipes'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recipes')
-        .select(
-          'id, title, subtitle, description, image_url, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color'
-        )
+        .select(RECIPE_LIST_COLUMNS)
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true })
         .limit(RECIPES_LIST_LIMIT);
@@ -140,8 +148,7 @@ export async function searchRecipes(query: string, category?: string | null): Pr
   // user input is matched literally instead of acting as a search pattern.
   const pattern = trimmed ? `%${trimmed.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%` : null;
 
-  const cols =
-    'id, title, subtitle, description, image_url, category, minutes, persons, difficulty, rating, audio_available, occasion, category_color';
+  const cols = RECIPE_LIST_COLUMNS;
 
   // Parameterized per-column filters (no user string interpolated into a raw
   // .or() filter). With a search term, three parallel queries keep OR semantics
@@ -228,7 +235,7 @@ export const useRecipeCategories = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from('recipes')
-        .select('category')
+        .select('category, ingredients!inner(id)')
         .order('sort_order', { ascending: true })
         .order('id', { ascending: true })
         .limit(RECIPES_LIST_LIMIT);

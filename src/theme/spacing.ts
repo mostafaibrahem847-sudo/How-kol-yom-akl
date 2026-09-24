@@ -9,7 +9,7 @@ export const spacing = {
 
 export const radius = {
   small: 6,
-  medium: 12,
+  medium: 20,
   large: 20,
   full: 9999,
   input: 8,

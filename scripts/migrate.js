@@ -13,7 +13,9 @@
 // Schema DDL is NOT applied by this script (PostgREST cannot run DDL). Apply
 // src/db/schema.sql first with the service role via the Supabase SQL editor or
 // `supabase db`. This script then seeds the canonical content from
-// src/db/seed.sql. Both steps use the same single source files.
+// src/db/seed.sql, which holds the authored catalog followed by the recipe.md
+// catalog (appended). Statements are applied in file order within each table so
+// later blocks override earlier ones on conflict, matching production.
 
 const fs = require('fs');
 const path = require('path');
@@ -132,8 +134,13 @@ function toJs(raw) {
   return s;
 }
 
+// Returns one entry per INSERT statement, in file order. Keeping statements
+// separate (rather than merging by table) is what lets seed.sql contain both the
+// authored catalog and the recipe.md catalog: the two blocks can share
+// (recipe_id, sort_order) keys, and upserting them as one batch would trip
+// Postgres' "ON CONFLICT cannot affect row a second time".
 function parseSeed(sql) {
-  const tables = {};
+  const statements = [];
   const stmtRe = /INSERT INTO\s+(?:\w+\.)?(\w+)\s*\(([^)]*)\)\s*VALUES([\s\S]*?);/gi;
   let m;
   while ((m = stmtRe.exec(sql)) !== null) {
@@ -152,19 +159,22 @@ function parseSeed(sql) {
       });
       return row;
     });
-    tables[table] = rows;
+    statements.push({ table, rows });
   }
-  return tables;
+  return statements;
 }
 
-// Insert order respects the recipes foreign key.
-const PLAN = [
-  { table: 'recipes', onConflict: 'id' },
-  { table: 'ingredients', onConflict: 'recipe_id,sort_order' },
-  { table: 'steps', onConflict: 'recipe_id,sort_order' },
-  { table: 'tips', onConflict: 'recipe_id,sort_order' },
-  { table: 'audio_urls', onConflict: 'recipe_id' },
-];
+// Parent tables must be seeded before their children (recipes before the
+// recipe_id children). Within a table, INSERT statements keep their file order.
+const TABLE_ORDER = ['recipes', 'ingredients', 'steps', 'tips', 'audio_urls'];
+
+const CONFLICT = {
+  recipes: 'id',
+  ingredients: 'recipe_id,sort_order',
+  steps: 'recipe_id,sort_order',
+  tips: 'recipe_id,sort_order',
+  audio_urls: 'recipe_id',
+};
 
 async function main() {
   const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -184,14 +194,20 @@ async function main() {
 
   const seedPath = path.join(__dirname, '..', 'src', 'db', 'seed.sql');
   const sql = fs.readFileSync(seedPath, 'utf8');
-  const tables = parseSeed(sql);
+  const statements = parseSeed(sql);
+
+  // FK-safe order, preserving file order within each table.
+  const known = new Set(TABLE_ORDER);
+  const ordered = [
+    ...TABLE_ORDER.flatMap((table) => statements.filter((s) => s.table === table)),
+    ...statements.filter((s) => !known.has(s.table)),
+  ];
 
   console.log(`Seeding from ${seedPath} using the service role...`);
 
-  for (const { table, onConflict } of PLAN) {
-    const rows = tables[table];
-    if (!rows || rows.length === 0) continue;
-    const { error } = await supabase.from(table).upsert(rows, { onConflict });
+  for (const { table, rows } of ordered) {
+    if (!rows.length) continue;
+    const { error } = await supabase.from(table).upsert(rows, { onConflict: CONFLICT[table] });
     if (error) {
       console.error(`  ${table}: FAILED — ${error.message}`);
       process.exitCode = 1;

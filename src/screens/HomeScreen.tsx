@@ -1,16 +1,21 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, typography, headerHeight } from '../theme';
+import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import { useRecipes } from '../data/queries';
 import RecipeCard from '../components/RecipeCard';
+import RecipeCardList from '../components/RecipeCardList';
+import RecipeCardGrid from '../components/RecipeCardGrid';
+import RecipeViewToggle from '../components/RecipeViewToggle';
 import AppHeader from '../components/AppHeader';
+import { useViewMode } from '../state/viewMode';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { data: recipes, isLoading, isError, refetch } = useRecipes();
+  const mode = useViewMode((s) => s.mode);
   const list = recipes ?? [];
   const heroRecipe = list[0];
   const feedRecipes = list.slice(1);
@@ -30,7 +35,6 @@ export default function HomeScreen() {
             <RecipeCard
               recipe={heroRecipe}
               onPress={() => navigation.navigate('RecipeDetail', { id: heroRecipe.id })}
-              variant="hero"
             />
           </View>
         )}
@@ -44,9 +48,14 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
 
-        {/* Feed */}
-        <Text style={styles.feedHeader}>{t.home.feedHeader}</Text>
-        <Text style={styles.feedSub}>{t.home.feedSubheader}</Text>
+        {/* Feed heading with the view switcher on the physical left */}
+        <View style={styles.feedHeaderRow}>
+          <View style={styles.feedHeaderText}>
+            <Text style={styles.feedHeader}>{t.home.feedHeader}</Text>
+            <Text style={styles.feedSub}>{t.home.feedSubheader}</Text>
+          </View>
+          <RecipeViewToggle />
+        </View>
 
         {isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
@@ -65,11 +74,21 @@ export default function HomeScreen() {
         ) : (
           <View style={styles.feedGrid}>
             {feedRecipes.map((r) => (
-              <View key={r.id} style={styles.cardWrapper}>
-                <RecipeCard
-                  recipe={r}
-                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-                />
+              <View
+                key={r.id}
+                style={mode === 'grid' ? styles.cardWrapperGrid : styles.cardWrapperFull}
+              >
+                {mode === 'grid' ? (
+                  <RecipeCardGrid
+                    recipe={r}
+                    onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                  />
+                ) : (
+                  <RecipeCardList
+                    recipe={r}
+                    onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                  />
+                )}
               </View>
             ))}
           </View>
@@ -107,10 +126,25 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterChipText: { ...typography.label, color: colors.neutralMid },
-  feedHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
-  feedSub: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.lg },
-  feedGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' },
-  cardWrapper: { width: '100%' },
+  feedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: spacing.lg,
+  },
+  feedHeaderText: { flex: 1, minWidth: 0, marginLeft: spacing.md },
+  feedHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.xs },
+  feedSub: { ...typography.body, color: colors.neutralMuted },
+  feedGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    maxWidth: SINGLE_COLUMN_MAX_WIDTH,
+    alignSelf: 'center',
+  },
+  cardWrapperFull: { width: '100%', marginBottom: spacing.md },
+  cardWrapperGrid: { width: '48%', marginBottom: spacing.md },
   fixedHeader: {
     position: 'absolute',
     top: 0,

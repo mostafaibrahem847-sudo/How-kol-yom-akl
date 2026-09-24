@@ -175,7 +175,7 @@ const styles = StyleSheet.create({
   authActionBtn: {
     flex: 1,
     minHeight: 50,
-    borderRadius: 30,
+    borderRadius: 50,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
