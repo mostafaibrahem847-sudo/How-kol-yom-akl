@@ -7,7 +7,9 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "narration:dry": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-narration.ts --dry-run",
+    "narration": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/generate-narration.ts"
   },
   "dependencies": {
     "@clerk/expo": "^4.6.8",

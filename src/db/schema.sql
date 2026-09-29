@@ -6,8 +6,8 @@
 --
 -- Decisions reconciled against the live project (lawoormzqfeyafjrptwc) on
 -- 2026-09-10:
---   * recipes.id is TEXT — stable, human-readable slug ids ('okra', 'molokhia',
---     ...). Child tables keep UUID primary keys; recipe_id is a TEXT FK.
+--   * recipes.id is TEXT — stable, human-readable slug ids ('molokhia',
+--     'koshari', ...). Child tables keep UUID primary keys; recipe_id is a TEXT FK.
 --   * recipes.audio_url does NOT exist. Narration lives in the separate
 --     audio_urls table (one row per recipe today; see the unique index below).
 --   * image_url is added here (nullable). The UI and the Recipe type already
@@ -98,40 +98,13 @@ from (
          coalesce(v.ord, 100 + row_number() over (order by r2.created_at, r2.id))::int as ord
   from public.recipes r2
   left join (values
-    ('okra', 1), ('molokhia', 2), ('kofta', 3), ('bechamel', 4), ('oxtail', 5),
+    ('molokhia', 2), ('kofta', 3), ('bechamel', 4), ('oxtail', 5),
     ('koshary', 6), ('potatoChicken', 7), ('omAli', 8), ('chickenPotato', 9),
     ('hawawshi', 10)
   ) as v(id, ord) on v.id = r2.id
 ) s
 where r.id = s.id
   and r.sort_order is distinct from s.ord;
-
--- Ingredient order for the authored okra recipe (matched by content so the
--- original authored sequence is preserved without inventing data).
-update public.ingredients i
-set sort_order = v.ord
-from (values
-  ('١ كيلو بامية بلدي مقمعة طازة صغننة', 1),
-  ('نصف كيلو لحمة ضاني مسلوقة نص سلقة مع الشوربة', 2),
-  ('٤ أكواب عصير طماطم فريش متسبكة تقيلة', 3),
-  ('رأس توم بلدي مفروم مع قرن فلفل حامي أحمر', 4),
-  ('٢ ملعقة كبيرة سمنة بلدي بقري فلاحي', 5),
-  ('ملعقة كزبرة ناشفة مطحونة ناعم للطشة', 6),
-  ('ليمونة معصفرة مقطعة مكعبات صغننة + عصير ليمونة فريش', 7),
-  ('ملح خشن، فلفل أسود مجروش، ورشة جوزة الطيب', 8)
-) as v(text, ord)
-where i.recipe_id = 'okra' and i.text = v.text
-  and i.sort_order is distinct from v.ord;
-
--- Tip order for the authored okra recipe.
-update public.tips t
-set sort_order = v.ord
-from (values
-  ('بلاش تقليب كتير في البامية!', 1),
-  ('تسخين الطاجن الفخار سر التسوية', 2)
-) as v(title, ord)
-where t.recipe_id = 'okra' and t.title = v.title
-  and t.sort_order is distinct from v.ord;
 
 -- Generic fallback: any remaining null child positions get a stable per-recipe
 -- rank so ordering never depends on random UUID values.

@@ -1,158 +1,178 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
+  Pressable,
   StyleSheet,
   Image,
   Share,
   ActivityIndicator,
-  Dimensions,
-  Pressable,
-  Platform,
+  TextStyle,
 } from 'react-native';
-import { useAudioPlayerHook } from '../hooks/useAudioPlayer';
+import { LinearGradient } from 'expo-linear-gradient';
+import Feather from '@expo/vector-icons/Feather';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import { colors, spacing, typography, buttonSize, radius, elevation, screenPadding } from '../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  colors,
+  spacing,
+  typography,
+  radius,
+  elevation,
+  screenPadding,
+  fontFamilyFor,
+} from '../theme';
 import { useRecipe } from '../data/queries';
 import { useFavorites } from '../state/favorites';
-import CategoryChip from '../components/CategoryChip';
 import { RootStackParamList } from '../navigation/RootNavigator';
 import { t } from '../i18n/strings';
 import { toArabicNumerals } from '../i18n/numerals';
+import { useAudioPlayerHook } from '../hooks/useAudioPlayer';
+import VoiceAssistantCard from '../components/VoiceAssistantCard';
+import ListenButton from '../components/ListenButton';
 
-const { width } = Dimensions.get('window');
-const HERO_WIDTH = width;
-const HERO_HEIGHT = HERO_WIDTH * (3 / 4);
+// ─── Layout constants ─────────────────────────────────────────────────────────
 
-type DetailRouteProp = RouteProp<RootStackParamList, 'RecipeDetail'>;
+const HERO_HEIGHT = 245;
+const CIRCLE_BTN = 40;
+// Reserved height of the sticky bottom bar's own content (buttons + padding),
+// excluding the device bottom inset which is added at runtime.
+const BOTTOM_BAR_CONTENT = 44 + spacing.sm * 2;
 
-// ─── Ingredient Row ────────────────────────────────────────────────────────────
+// The photo fades into the cream page on both ends: a warm scrim at the top so
+// the floating controls stay legible, and a cream fade at the bottom so the
+// headline block flows out of the image. Stops are distributed evenly (0/50/100)
+// which is exactly the design's from/via/to treatment.
+const HERO_FADE_UP = [colors.secondary, 'rgba(26,26,26,0.22)', 'rgba(0,0,0,0.55)'] as const;
+const HERO_FADE_DOWN = ['rgba(0,0,0,0.40)', 'transparent', colors.secondary] as const;
 
-function IngredientRow({ text, checked, onToggle }: { text: string; checked: boolean; onToggle: () => void }) {
+type FeatherName = keyof typeof Feather.glyphMap;
+type DetailTab = 'ingredients' | 'steps' | 'tips';
+
+// Category → chip colour, mirroring CategoryChip so the hero tag stays
+// data-driven without duplicating the whole component just for a pill shape.
+const categoryColor = (color?: string): string => {
+  switch (color) {
+    case 'amber':
+      return colors.success;
+    case 'mint':
+      return colors.accentLight;
+    case 'terracottaLight':
+      return colors.primaryLight;
+    case 'oliveDark':
+      return colors.accentDark;
+    case 'olive':
+    default:
+      return colors.accent;
+  }
+};
+
+// ─── Ingredient row ───────────────────────────────────────────────────────────
+
+function IngredientRow({
+  text,
+  checked,
+  onToggle,
+}: {
+  text: string;
+  checked: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <Pressable style={styles.ingredientRow} onPress={onToggle} accessibilityRole="checkbox" accessibilityState={{ checked }}>
-      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
-        {checked && <Text style={styles.checkmark}>✓</Text>}
+    <Pressable
+      style={({ pressed }) => [styles.ingredientRow, pressed && styles.rowPressed]}
+      onPress={onToggle}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked }}
+      accessibilityLabel={text}
+    >
+      <View style={styles.ingredientLeft}>
+        <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+          {checked && <Feather name="check" size={13} color={colors.white} />}
+        </View>
+        <Text
+          style={[styles.ingredientText, checked && styles.ingredientTextChecked]}
+          numberOfLines={2}
+        >
+          {text}
+        </Text>
       </View>
-      <Text style={[styles.ingredientText, checked && styles.ingredientTextChecked]}>{text}</Text>
     </Pressable>
   );
 }
 
-// ─── Step Row ─────────────────────────────────────────────────────────────────
+// ─── Step accordion item ──────────────────────────────────────────────────────
 
-function StepRow({ number, title, body }: { number: number; title: string; body: string }) {
+function StepAccordion({
+  number,
+  title,
+  body,
+  open,
+  onToggle,
+}: {
+  number: number;
+  title: string;
+  body: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <View style={styles.stepRow}>
-      <View style={styles.stepNumber}>
-        <Text style={styles.stepNumberText}>{toArabicNumerals(number)}</Text>
-      </View>
-      <View style={styles.stepContent}>
-        <Text style={styles.stepTitle}>{title}</Text>
-        <Text style={styles.stepBody}>{body}</Text>
-      </View>
-    </View>
-  );
-}
-
-// ─── Tip Row ──────────────────────────────────────────────────────────────────
-
-function TipRow({ title, body }: { title: string; body: string }) {
-  return (
-    <View style={styles.tipRow}>
-      <Text style={styles.tipTitle}>{title}</Text>
-      <Text style={styles.tipBody}>{body}</Text>
-    </View>
-  );
-}
-
-// ─── Voice Player Dock ─────────────────────────────────────────────────────────
-
-function VoicePlayerDock({ audioUrl }: { audioUrl?: string }) {
-  const { state, isPlaying, togglePlay, replay } = useAudioPlayerHook(audioUrl);
-  const hasUrl = !!audioUrl;
-
-  // ── design.md voice rules ──────────────────────────────────────────────────
-  // Resting: #D35400 bg, white icon
-  // Playing: #FDFBF7 cream bg + glow, white icon
-  // Paused:  #FFFFFF bg, #D35400 icon
-  // ────────────────────────────────────────────────────────────────────────────
-  const dockBg =
-    state === 'playing' ? colors.secondary :
-    state === 'paused'  ? colors.white      :
-    hasUrl              ? colors.primary     :
-    colors.neutralSurface;
-
-  const iconColor =
-    state === 'playing' ? colors.white       :
-    state === 'paused'  ? colors.primary     :
-    colors.white;
-
-  const buttonBg =
-    state === 'playing' ? colors.secondary   :
-    state === 'paused'  ? colors.white       :
-    colors.primary;
-
-  return (
-    <View style={[styles.voiceDock, { backgroundColor: dockBg }, state === 'playing' && styles.voiceDockPlaying]}>
-      <View style={styles.voiceDockLeft}>
-        <Text style={[styles.voiceDockIcon, state === 'playing' && styles.voiceDockIconPlaying]}>🎙️</Text>
-        <View>
-          <Text style={[styles.voiceDockTitle, state === 'playing' && styles.voiceDockTitlePlaying]}>
-            {t.recipeDetail.audioTitle}
-          </Text>
-          <Text style={[styles.voiceDockSub, state === 'playing' && styles.voiceDockSubPlaying]}>
-            {!hasUrl      ? t.recipeDetail.audioIdle :
-             state === 'playing' ? t.recipeDetail.audioPlaying :
-             state === 'paused'  ? t.recipeDetail.audioPaused  :
-             t.recipeDetail.audioIdle}
+    <View style={styles.stepCard}>
+      <Pressable
+        style={({ pressed }) => [styles.stepHeader, pressed && styles.rowPressed]}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={open ? t.recipeDetail.collapseStep : t.recipeDetail.expandStep}
+        hitSlop={{ top: 2, bottom: 2, left: 2, right: 2 }}
+      >
+        <View style={styles.stepHeaderStart}>
+          <View style={styles.stepNumberBox}>
+            <Text style={styles.stepNumberText}>{toArabicNumerals(number)}</Text>
+          </View>
+          <Text style={styles.stepTitle} numberOfLines={2}>
+            {title}
           </Text>
         </View>
-      </View>
+        <Feather
+          name={open ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={colors.neutralMuted}
+        />
+      </Pressable>
 
-      <View style={styles.voiceDockActions}>
-        {hasUrl && state !== 'idle' && (
-          <TouchableOpacity
-            style={[styles.voiceDockActionBtn]}
-            onPress={replay}
-            accessibilityLabel={t.recipeDetail.replayLabel}
-          >
-            <Text style={[styles.voiceDockActionIcon, { color: iconColor }]}>↺</Text>
-          </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          style={[styles.voiceDockButton, { backgroundColor: buttonBg }]}
-          onPress={hasUrl ? togglePlay : undefined}
-          activeOpacity={0.8}
-          accessibilityLabel={isPlaying ? t.recipeDetail.pauseLabel : t.recipeDetail.playLabel}
-        >
-          <Text style={[styles.voiceDockButtonText, { color: iconColor }]}>
-            {state === 'loading' ? '…' : isPlaying ? '⏸' : '▶'}
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {!hasUrl && (
-        <Text style={styles.voiceDockPlaceholder}>{t.recipeDetail.audioIdle}</Text>
-      )}
+      {open ? (
+        <View style={styles.stepBody}>
+          <Text style={styles.stepBodyText}>{body}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
-// ─── Main Screen ───────────────────────────────────────────────────────────────
+// ─── Main screen ──────────────────────────────────────────────────────────────
+
+type DetailRouteProp = RouteProp<RootStackParamList, 'RecipeDetail'>;
 
 export default function RecipeDetailScreen() {
   const route = useRoute<DetailRouteProp>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { id } = route.params;
 
   const { data: recipe, isLoading, isError, refetch } = useRecipe(id);
   const { has, toggle } = useFavorites();
+  // One player owned by the screen so the inline card and the sticky bar share
+  // the same narration state instead of creating two competing players.
+  const audio = useAudioPlayerHook(recipe?.audioUrl);
 
   const [checkedIngredients, setCheckedIngredients] = useState<Set<string>>(new Set());
-  const [activeTab, setActiveTab] = useState<'ingredients' | 'steps' | 'tips'>('ingredients');
+  const [activeTab, setActiveTab] = useState<DetailTab>('ingredients');
+  // `undefined` = untouched (first step expands by default); `null` = all closed.
+  const [openStep, setOpenStep] = useState<string | null | undefined>(undefined);
 
   const isFav = recipe ? has(recipe.id) : false;
 
@@ -165,11 +185,11 @@ export default function RecipeDetailScreen() {
     });
   }, []);
 
-  const handleFavorite = () => {
+  const handleFavorite = useCallback(() => {
     if (recipe) toggle(recipe.id);
-  };
+  }, [recipe, toggle]);
 
-  const handleShare = async () => {
+  const handleShare = useCallback(async () => {
     if (!recipe) return;
     try {
       await Share.share({
@@ -177,8 +197,9 @@ export default function RecipeDetailScreen() {
         title: recipe.title,
       });
     } catch {}
-  };
+  }, [recipe]);
 
+  // ── Loading ────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <View style={styles.centered}>
@@ -187,383 +208,787 @@ export default function RecipeDetailScreen() {
     );
   }
 
-  // Missing recipe (valid id that is not in the catalog) and query failure are
-  // distinct, honest states. Both keep the real back affordance; only the
+  // ── Missing recipe / query failure ─────────────────────────────────────────
+  // Two distinct, honest states. Both keep the real back affordance; only the
   // failure state offers a retry.
   if (isError || !recipe) {
     const missing = !isError;
     return (
       <View style={styles.root}>
         <View style={styles.headerBar}>
-          <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} accessibilityLabel={t.common.back}>
-            <Text style={styles.iconBtnText}>←</Text>
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.back}
+            activeOpacity={0.85}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <Feather name="arrow-right" size={20} color={colors.primary} />
           </TouchableOpacity>
-          <View style={styles.iconBtn} />
+          <View style={styles.glassSpacer} />
         </View>
+
         <View style={styles.centered}>
-          <Text style={styles.errorText}>{missing ? t.recipeDetail.notFound : t.recipeDetail.loadError}</Text>
-          {missing ? <Text style={styles.tipBody}>{t.recipeDetail.notFoundBody}</Text> : null}
+          <Text style={styles.errorText}>
+            {missing ? t.recipeDetail.notFound : t.recipeDetail.loadError}
+          </Text>
+          {missing ? <Text style={styles.errorBody}>{t.recipeDetail.notFoundBody}</Text> : null}
           {!missing ? (
-            <TouchableOpacity style={styles.backButton} onPress={() => refetch()} accessibilityRole="button">
-              <Text style={styles.backButtonText}>{t.common.retry}</Text>
-            </TouchableOpacity>
+            <Pressable
+              style={({ pressed }) => [styles.retryBtn, pressed && styles.btnPressed]}
+              onPress={() => refetch()}
+              accessibilityRole="button"
+              accessibilityLabel={t.common.retry}
+            >
+              <Text style={styles.retryBtnText}>{t.common.retry}</Text>
+            </Pressable>
           ) : null}
         </View>
       </View>
     );
   }
 
-  const checkedCount = checkedIngredients.size;
   const totalCount = recipe.ingredients?.length ?? 0;
+  const checkedCount = checkedIngredients.size;
+  const hasAudio = Boolean(recipe.audioUrl);
+  const showAudio = Boolean(recipe.audioAvailable) || hasAudio;
+
+  const firstStepId = recipe.steps?.[0]?.id ?? null;
+  const effectiveOpenStep = openStep === undefined ? firstStepId : openStep;
+  const toggleStep = (stepId: string) => {
+    const current = openStep === undefined ? firstStepId : openStep;
+    setOpenStep(current === stepId ? null : stepId);
+  };
+
+  const stats: { key: string; icon: FeatherName; label: string; value: string }[] = [
+    {
+      key: 'time',
+      icon: 'clock',
+      label: t.recipeDetail.stats.time,
+      value: `${toArabicNumerals(recipe.minutes)} ${t.common.minutes}`,
+    },
+    {
+      key: 'persons',
+      icon: 'users',
+      label: t.recipeDetail.stats.persons,
+      value: `${toArabicNumerals(recipe.persons)} ${t.common.persons}`,
+    },
+  ];
+  if (recipe.difficulty) {
+    stats.push({
+      key: 'difficulty',
+      icon: 'zap',
+      label: t.recipeDetail.stats.difficulty,
+      value: recipe.difficulty,
+    });
+  }
+  if (recipe.rating) {
+    stats.push({
+      key: 'rating',
+      icon: 'star',
+      label: t.recipeDetail.stats.rating,
+      value: toArabicNumerals(recipe.rating),
+    });
+  }
 
   return (
     <View style={styles.root}>
-      {/* Header / Back */}
-      <View style={styles.headerBar}>
-        <TouchableOpacity style={styles.iconBtn} onPress={() => navigation.goBack()} accessibilityLabel={t.common.back}>
-          <Text style={styles.iconBtnText}>←</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.iconBtn} onPress={handleShare} accessibilityLabel={t.common.share}>
-          <Text style={styles.iconBtnText}>↗</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        {/* Hero Image */}
-        <View style={styles.heroImageWrapper}>
+      <ScrollView
+        style={[styles.scrollView, { marginTop: -insets.top }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingBottom: BOTTOM_BAR_CONTENT + insets.bottom + spacing.xl },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── Hero ─────────────────────────────────────────────────────────── */}
+        <View style={styles.hero}>
           {recipe.imageUrl ? (
-            <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+            <Image
+              source={{ uri: recipe.imageUrl }}
+              style={StyleSheet.absoluteFill}
+              resizeMode="cover"
+              accessible={false}
+            />
           ) : (
-            <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <Text style={styles.heroPlaceholderText}>🍲</Text>
+            <View style={[StyleSheet.absoluteFill, styles.heroPlaceholder]}>
+              <MaterialCommunityIcons
+                name="pot-steam-outline"
+                size={56}
+                color={colors.primaryLight}
+              />
             </View>
           )}
-          {/* Gradient overlay */}
-          <View style={styles.heroOverlay} />
-          {/* Category tag over image */}
+
+          <LinearGradient
+            colors={HERO_FADE_DOWN}
+            start={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 1 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+          <LinearGradient
+            colors={HERO_FADE_UP}
+            start={{ x: 0.5, y: 1 }}
+            end={{ x: 0.5, y: 0 }}
+            style={StyleSheet.absoluteFill}
+            pointerEvents="none"
+          />
+
           <View style={styles.heroCategory}>
-            <CategoryChip label={recipe.category} color={recipe.categoryColor} />
-          </View>
-        </View>
-
-        {/* Title block */}
-        <View style={styles.titleBlock}>
-          <Text style={styles.recipeTitle}>{recipe.title}</Text>
-          {recipe.subtitle ? (
-            <Text style={styles.recipeSubtitle}>{recipe.subtitle}</Text>
-          ) : null}
-          <Text style={styles.recipeDescription}>{recipe.description}</Text>
-        </View>
-
-        {/* Stats row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statItem}>
-            <Text style={styles.statIcon}>⏱</Text>
-            <Text style={styles.statValue}>{toArabicNumerals(recipe.minutes)}</Text>
-            <Text style={styles.statLabel}>{t.common.minutes}</Text>
-          </View>
-          <View style={styles.statDivider} />
-          <View style={styles.statItem}>
-            <Text style={styles.statIcon}>🍽</Text>
-            <Text style={styles.statValue}>{toArabicNumerals(recipe.persons)}</Text>
-            <Text style={styles.statLabel}>{t.common.persons}</Text>
-          </View>
-          {recipe.difficulty ? (
-            <>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>⚡</Text>
-                <Text style={styles.statValue}>{recipe.difficulty}</Text>
-              </View>
-            </>
-          ) : null}
-          {recipe.rating ? (
-            <>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statIcon}>⭐</Text>
-                <Text style={styles.statValue}>{recipe.rating}</Text>
-              </View>
-            </>
-          ) : null}
-        </View>
-
-        {/* Tab bar */}
-        <View style={styles.tabBar}>
-          {(['ingredients', 'steps', 'tips'] as const).map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              style={[styles.tab, activeTab === tab && styles.tabActive]}
-              onPress={() => setActiveTab(tab)}
+            <View
+              style={[
+                styles.heroTag,
+                { backgroundColor: categoryColor(recipe.categoryColor) },
+              ]}
             >
-              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-                {tab === 'ingredients' ? t.recipeDetail.tabIngredients(recipe.ingredients?.length ?? 0) :
-                 tab === 'steps'       ? t.recipeDetail.tabSteps(recipe.steps?.length ?? 0)  :
-                 t.recipeDetail.tabTips}
+              <MaterialCommunityIcons name="star" size={12} color={colors.white} />
+              <Text style={styles.heroTagText} numberOfLines={1}>
+                {recipe.category}
               </Text>
-            </TouchableOpacity>
-          ))}
+            </View>
+          </View>
         </View>
 
-        {/* Tab Content */}
-        {activeTab === 'ingredients' && (
-          <View style={styles.tabContent}>
-            {(recipe.ingredients?.length ?? 0) === 0 ? (
-              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noIngredients}</Text>
-            ) : (
-              <>
-                <Text style={styles.ingredientsHelper}>{t.recipeDetail.ingredientsHelper}</Text>
-                {checkedCount > 0 && (
-                  <Text style={styles.ingredientsCounter}>
-                    {t.recipeDetail.ingredientsCounter(checkedCount, totalCount)}
+        {/* ── Headline + metadata ──────────────────────────────────────────── */}
+        <View style={styles.overview}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{recipe.title}</Text>
+            {recipe.occasion ? (
+              <View style={styles.occasionBadge}>
+                <Text style={styles.occasionBadgeText} numberOfLines={1}>
+                  {recipe.occasion}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Text style={styles.description}>{recipe.description}</Text>
+
+          <View style={styles.statsCard}>
+            {stats.map((stat, index) => (
+              <React.Fragment key={stat.key}>
+                {index > 0 ? <View style={styles.statDivider} /> : null}
+                <View style={styles.statItem}>
+                  <Feather
+                    name={stat.icon}
+                    size={16}
+                    color={colors.primary}
+                    style={styles.statIcon}
+                  />
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                  <Text style={styles.statValue} numberOfLines={1}>
+                    {stat.value}
                   </Text>
-                )}
-                {recipe.ingredients?.map((ing) => (
+                </View>
+              </React.Fragment>
+            ))}
+          </View>
+        </View>
+
+        {/* ── Narration card ───────────────────────────────────────────────── */}
+        <VoiceAssistantCard recipeId={recipe.id} enabled={showAudio} audio={audio} />
+
+        {/* ── Section tabs + content ───────────────────────────────────────── */}
+        <View style={styles.section}>
+          <View style={styles.tabs} accessibilityRole="tablist">
+            <DetailTabButton
+              label={t.recipeDetail.tabIngredients(totalCount)}
+              active={activeTab === 'ingredients'}
+              onPress={() => setActiveTab('ingredients')}
+            />
+            <DetailTabButton
+              label={t.recipeDetail.tabSteps(recipe.steps?.length ?? 0)}
+              active={activeTab === 'steps'}
+              onPress={() => setActiveTab('steps')}
+            />
+            <DetailTabButton
+              label={t.recipeDetail.tabTips}
+              active={activeTab === 'tips'}
+              onPress={() => setActiveTab('tips')}
+            />
+          </View>
+
+          {activeTab === 'ingredients' ? (
+            <View>
+              <View style={styles.ingredientsHeader}>
+                <Text style={styles.ingredientsHelper} numberOfLines={2}>
+                  {t.recipeDetail.ingredientsHelper}
+                </Text>
+                {checkedCount > 0 ? (
+                  <View style={styles.counterPill}>
+                    <Text style={styles.counterPillText}>
+                      {t.recipeDetail.ingredientsCounter(checkedCount, totalCount)}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {totalCount === 0 ? (
+                <Text style={styles.emptyText}>{t.recipeDetail.noIngredients}</Text>
+              ) : (
+                recipe.ingredients?.map((ing) => (
                   <IngredientRow
                     key={ing.id}
                     text={ing.text}
                     checked={checkedIngredients.has(ing.id)}
                     onToggle={() => toggleIngredient(ing.id)}
                   />
-                ))}
-              </>
-            )}
-          </View>
-        )}
+                ))
+              )}
+            </View>
+          ) : null}
 
-        {activeTab === 'steps' && (
-          <View style={styles.tabContent}>
-            {(recipe.steps?.length ?? 0) === 0 ? (
-              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noSteps}</Text>
+          {activeTab === 'steps' ? (
+            (recipe.steps?.length ?? 0) === 0 ? (
+              <Text style={styles.emptyText}>{t.recipeDetail.noSteps}</Text>
             ) : (
               recipe.steps?.map((step, i) => (
-                <StepRow key={step.id} number={i + 1} title={step.title} body={step.body} />
+                <StepAccordion
+                  key={step.id}
+                  number={i + 1}
+                  title={step.title}
+                  body={step.body}
+                  open={effectiveOpenStep === step.id}
+                  onToggle={() => toggleStep(step.id)}
+                />
               ))
-            )}
-          </View>
-        )}
+            )
+          ) : null}
 
-        {activeTab === 'tips' && (
-          <View style={styles.tabContent}>
-            {(recipe.tips?.length ?? 0) === 0 ? (
-              <Text style={styles.ingredientsHelper}>{t.recipeDetail.noTips}</Text>
+          {activeTab === 'tips' ? (
+            (recipe.tips?.length ?? 0) === 0 ? (
+              <Text style={styles.emptyText}>{t.recipeDetail.noTips}</Text>
             ) : (
               recipe.tips?.map((tip) => (
-                <TipRow key={tip.id} title={tip.title} body={tip.body} />
+                <View key={tip.id} style={styles.tipCard}>
+                  <View style={styles.tipTitleRow}>
+                    <Feather name="star" size={14} color={colors.accentDark} />
+                    <Text style={styles.tipTitle}>{tip.title}</Text>
+                  </View>
+                  <Text style={styles.tipBody}>{tip.body}</Text>
+                </View>
               ))
-            )}
-          </View>
-        )}
-
-        {/* Favorite button */}
-        <TouchableOpacity
-          style={[styles.favoriteBtn, isFav && styles.favoriteBtnActive]}
-          onPress={handleFavorite}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.favoriteBtnText}>
-            {isFav ? `❤️ ${t.recipeDetail.favoriteRemove}` : `🤍 ${t.recipeDetail.favoriteAdd}`}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Voice dock */}
-        <VoicePlayerDock audioUrl={recipe.audioUrl} />
-
-        <View style={{ height: 40 }} />
+            )
+          ) : null}
+        </View>
       </ScrollView>
 
-      {/* Floating voice button (always visible) */}
-      {recipe.audioAvailable && (
+      {/* ── Floating top bar (over the hero) ──────────────────────────────── */}
+      <View style={styles.headerBar} pointerEvents="box-none">
         <TouchableOpacity
-          style={styles.fab}
-          onPress={() => setActiveTab('steps')}
-          accessibilityLabel={t.recipeDetail.micButton}
+          style={styles.glassBtn}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t.common.back}
+          activeOpacity={0.85}
+          hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
         >
-          <Text style={styles.fabText}>🎙️</Text>
+          <Feather name="arrow-right" size={20} color={colors.primary} />
         </TouchableOpacity>
-      )}
+
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={handleFavorite}
+            accessibilityRole="button"
+            accessibilityState={{ selected: isFav }}
+            accessibilityLabel={
+              isFav ? t.recipeDetail.favoriteRemove : t.recipeDetail.favoriteAdd
+            }
+            activeOpacity={0.85}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <MaterialCommunityIcons
+              name={isFav ? 'heart' : 'heart-outline'}
+              size={20}
+              color={colors.primary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.glassBtn}
+            onPress={handleShare}
+            accessibilityRole="button"
+            accessibilityLabel={t.common.share}
+            activeOpacity={0.85}
+            hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
+          >
+            <Feather name="share-2" size={19} color={colors.neutralMid} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Sticky bottom action bar ──────────────────────────────────────── */}
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
+        <ListenButton recipeId={recipe.id} enabled={showAudio} audio={audio} />
+
+        <Pressable
+          style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
+          onPress={() => setActiveTab('steps')}
+          accessibilityRole="button"
+          accessibilityLabel={t.recipeDetail.startCooking}
+        >
+          <MaterialCommunityIcons
+            name="pot-steam-outline"
+            size={17}
+            color={colors.white}
+          />
+          <Text style={styles.primaryBtnText}>{t.recipeDetail.startCooking}</Text>
+        </Pressable>
+      </View>
     </View>
+  );
+}
+
+// ─── Segmented tab button ─────────────────────────────────────────────────────
+
+function DetailTabButton({
+  label,
+  active,
+  onPress,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.tab,
+        active && styles.tabActive,
+        pressed && styles.rowPressed,
+      ]}
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={label}
+      hitSlop={{ top: 2, bottom: 2 }}
+    >
+      {active ? <View style={styles.tabDot} /> : null}
+      <Text
+        style={[styles.tabText, active && styles.tabTextActive]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
+const titleText: TextStyle = {
+  fontFamily: fontFamilyFor('800'),
+  fontSize: 22,
+  lineHeight: 31,
+  fontWeight: 'normal',
+};
+
+const statValueText: TextStyle = {
+  fontFamily: fontFamilyFor('700'),
+  fontSize: 12,
+  lineHeight: 17,
+  fontWeight: 'normal',
+};
+
+const strongText: TextStyle = {
+  fontFamily: fontFamilyFor('700'),
+  fontWeight: 'normal',
+};
+
+const extraStrongText: TextStyle = {
+  fontFamily: fontFamilyFor('800'),
+  fontWeight: 'normal',
+};
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.secondary },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.secondary },
-  errorText: { ...typography.bodyLarge, color: colors.neutralMid, marginBottom: spacing.lg },
-
-  headerBar: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 50 : 40,
-    right: spacing.lg,
-    left: spacing.lg,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    zIndex: 10,
-  },
-  iconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.medium,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    ...elevation.cardLifted,
-  },
-  iconBtnText: { fontSize: 30, color: colors.primary },
-
-  scroll: { paddingBottom: 0 },
-
-  heroImageWrapper: { width: HERO_WIDTH, height: HERO_HEIGHT, position: 'relative' },
-  heroImage: { width: '100%', height: '100%' },
-  heroPlaceholder: {
-    backgroundColor: colors.secondaryDark,
+  centered: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.secondary,
+    paddingHorizontal: screenPadding.horizontal,
   },
-  heroPlaceholderText: { fontSize: 80 },
-  heroOverlay: {
-    ...StyleSheet.absoluteFill,
-    backgroundColor: 'rgba(212,167,129,0.15)',
-    borderBottomLeftRadius: radius.medium,
-    borderBottomRightRadius: radius.medium,
+  scrollView: { flex: 1 },
+  scroll: { paddingBottom: spacing.xl },
+  errorText: { ...typography.bodyLarge, color: colors.neutralMid, marginBottom: spacing.sm },
+  errorBody: {
+    ...typography.body,
+    color: colors.neutralMuted,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  retryBtn: {
+    marginTop: spacing.sm,
+    height: 44,
+    paddingHorizontal: spacing.xl,
+    borderRadius: radius.card,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  retryBtnText: { ...typography.button, color: colors.white },
+
+  // ── Hero ─────────────────────────────────────────────────────────────────
+  hero: {
+    width: '100%',
+    height: HERO_HEIGHT,
+    overflow: 'hidden',
+    backgroundColor: colors.secondaryDark,
+  },
+  heroPlaceholder: {
+    backgroundColor: colors.secondaryDark,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroCategory: {
     position: 'absolute',
     bottom: spacing.md,
-    right: spacing.md,
+    right: screenPadding.horizontal,
   },
-
-  titleBlock: {
-    paddingHorizontal: screenPadding.horizontal,
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.lg,
-  },
-  recipeTitle: { ...typography.h1, color: colors.neutralDark, marginBottom: spacing.sm },
-  recipeSubtitle: { ...typography.bodyLarge, color: colors.neutralMid, marginBottom: spacing.sm },
-  recipeDescription: { ...typography.body, color: colors.neutralMuted },
-
-  statsRow: {
+  heroTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: screenPadding.horizontal,
-    backgroundColor: colors.neutralSurface,
-    borderRadius: radius.medium,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statIcon: { fontSize: 16, marginBottom: 2 },
-  statValue: { ...typography.label, color: colors.neutralDark },
-  statLabel: { ...typography.bodySmall, color: colors.neutralMuted },
-  statDivider: { width: 1, height: 32, backgroundColor: colors.border },
-
-  tabBar: {
-    flexDirection: 'row',
-    marginHorizontal: screenPadding.horizontal,
-    borderRadius: radius.medium,
-    backgroundColor: colors.neutralSurface,
-    padding: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  tab: { flex: 1, paddingVertical: spacing.sm, alignItems: 'center', borderRadius: radius.small },
-  tabActive: { backgroundColor: colors.primary },
-  tabText: { ...typography.label, color: colors.neutralMuted },
-  tabTextActive: { color: colors.white },
-
-  tabContent: { paddingHorizontal: screenPadding.horizontal, paddingTop: spacing.md },
-
-  ingredientRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  checkbox: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-  checkboxChecked: { backgroundColor: colors.primary },
-  checkmark: { color: colors.white, fontWeight: 'bold', fontSize: 14, lineHeight: 16 },
-  ingredientText: { ...typography.body, color: colors.neutralMid, flex: 1 },
-  ingredientTextChecked: { textDecorationLine: 'line-through', color: colors.neutralLight },
-
-  ingredientsHelper: { ...typography.bodySmall, color: colors.neutralMuted, marginBottom: spacing.sm },
-  ingredientsCounter: { ...typography.body, color: colors.accent, marginBottom: spacing.md },
-
-  stepRow: { flexDirection: 'row', paddingVertical: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border },
-  stepNumber: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', marginRight: spacing.md, flexShrink: 0 },
-  stepNumberText: { color: colors.white, ...typography.label, fontWeight: '700' },
-  stepContent: { flex: 1 },
-  stepTitle: { ...typography.h3, color: colors.neutralDark, marginBottom: spacing.xs },
-  stepBody: { ...typography.bodyLarge, color: colors.neutralMid, lineHeight: 26 },
-
-  tipRow: { backgroundColor: colors.secondaryLight, borderRadius: radius.medium, padding: spacing.md, marginBottom: spacing.md },
-  tipTitle: { ...typography.h3, color: colors.accentDark, marginBottom: spacing.xs },
-  tipBody: { ...typography.body, color: colors.neutralMid },
-
-  favoriteBtn: {
-    marginHorizontal: screenPadding.horizontal,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.full,
     borderWidth: 1,
-    borderColor: colors.primary,
-    borderRadius: buttonSize.height / 2,
-    height: buttonSize.height,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.lg,
+    borderColor: 'rgba(255,255,255,0.25)',
   },
-  favoriteBtnActive: { backgroundColor: colors.primary },
-  favoriteBtnText: { ...typography.button, color: colors.primary },
+  heroTagText: {
+    ...typography.label,
+    fontSize: 11,
+    color: colors.white,
+    maxWidth: 180,
+  },
 
-  voiceDock: {
-    marginHorizontal: screenPadding.horizontal,
-    borderRadius: radius.medium,
-    padding: spacing.md,
+  // ── Floating top bar ─────────────────────────────────────────────────────
+  headerBar: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: screenPadding.horizontal,
+    right: screenPadding.horizontal,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    zIndex: 20,
+  },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  glassBtn: {
+    width: CIRCLE_BTN,
+    height: CIRCLE_BTN,
+    borderRadius: CIRCLE_BTN / 2,
+    backgroundColor: 'rgba(253,251,247,0.92)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...elevation.cardResting,
+  },
+  glassSpacer: { width: CIRCLE_BTN, height: CIRCLE_BTN },
+
+  // ── Headline + metadata ──────────────────────────────────────────────────
+  overview: {
+    paddingHorizontal: screenPadding.horizontal,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  title: { ...titleText, color: colors.neutralDark, flex: 1, minWidth: 0, textAlign: 'left' },
+  occasionBadge: {
+    backgroundColor: colors.neutralSurface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radius.full,
+    maxWidth: '42%',
+  },
+  occasionBadgeText: {
+    ...typography.labelSm,
+    ...strongText,
+    color: colors.accent,
+    textAlign: 'left',
+  },
+  description: {
+    ...typography.body,
+    color: colors.neutralMuted,
+    textAlign: 'left',
     marginBottom: spacing.md,
   },
-  voiceDockPlaying: {
-    elevation: 8,
-    shadowColor: colors.primary,
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 0 },
+  statsCard: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    backgroundColor: colors.secondaryLight,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: 'rgba(244,162,97,0.35)',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xs,
+    ...elevation.cardResting,
   },
-  voiceDockLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  voiceDockIcon: { fontSize: 24, marginRight: spacing.md },
-  voiceDockIconPlaying: { color: colors.white, textShadowColor: colors.primary, textShadowRadius: 6, textShadowOffset: { width: 0, height: 0 } },
-  voiceDockTitle: { ...typography.label, color: colors.neutralDark },
-  voiceDockTitlePlaying: { color: colors.neutralDark },
-  voiceDockSub: { ...typography.bodySmall, color: colors.neutralMuted },
-  voiceDockSubPlaying: { color: colors.accentDark },
-  voiceDockPlaceholder: { ...typography.bodySmall, color: colors.neutralLight, fontStyle: 'italic' },
-  voiceDockActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  voiceDockActionBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  voiceDockActionIcon: { fontSize: 22, fontWeight: '600' },
-  voiceDockButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+  statItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 2 },
+  statIcon: { marginBottom: 2 },
+  statLabel: {
+    ...typography.caption,
+    color: colors.neutralMuted,
+    marginBottom: 1,
+    textAlign: 'center',
   },
-  voiceDockButtonText: { fontSize: 18, fontWeight: 'bold' },
+  statValue: { ...statValueText, color: colors.neutralDark, textAlign: 'center' },
+  statDivider: { width: 1, backgroundColor: 'rgba(244,162,97,0.35)', marginVertical: spacing.xs },
 
-  fab: {
-    position: 'absolute',
-    bottom: 100,
-    left: screenPadding.horizontal,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+  // ── Tabs ─────────────────────────────────────────────────────────────────
+  section: { paddingHorizontal: screenPadding.horizontal },
+  tabs: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    backgroundColor: colors.neutralSurface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: 'rgba(244,162,97,0.3)',
+    padding: spacing.xs,
+    gap: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  tab: {
+    flex: 1,
+    minHeight: 40,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.input,
+  },
+  tabActive: { backgroundColor: colors.primary, ...elevation.cardResting },
+  tabDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.white,
+    marginLeft: spacing.xs,
+  },
+  tabText: {
+    ...strongText,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: colors.neutralMid,
+    textAlign: 'center',
+  },
+  tabTextActive: { color: colors.white },
+
+  // ── Ingredients ──────────────────────────────────────────────────────────
+  ingredientsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+    paddingHorizontal: 2,
+  },
+  ingredientsHelper: {
+    ...typography.bodySmall,
+    ...strongText,
+    color: colors.neutralMuted,
+    flex: 1,
+    textAlign: 'left',
+  },
+  counterPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutralSurface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+    flexShrink: 0,
+  },
+  counterPillText: { ...statValueText, color: colors.primary },
+  ingredientRow: {
+    minHeight: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+    marginBottom: 6,
+  },
+  rowPressed: { opacity: 0.7 },
+  ingredientLeft: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  checkboxChecked: { backgroundColor: colors.primary, borderColor: colors.primary },
+  ingredientText: {
+    flex: 1,
+    fontFamily: fontFamilyFor('600'),
+    fontWeight: 'normal',
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.neutralMid,
+    textAlign: 'left',
+  },
+  ingredientTextChecked: {
+    textDecorationLine: 'line-through',
+    color: colors.neutralLight,
+  },
+  emptyText: {
+    ...typography.body,
+    color: colors.neutralMuted,
+    textAlign: 'left',
+    paddingVertical: spacing.md,
+  },
+
+  // ── Steps accordion ──────────────────────────────────────────────────────
+  stepCard: {
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.card,
+    overflow: 'hidden',
+    marginBottom: spacing.sm,
+    ...elevation.cardResting,
+  },
+  stepHeader: {
+    minHeight: 52,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+  },
+  stepHeaderStart: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  stepNumberBox: {
+    width: 26,
+    height: 26,
+    borderRadius: radius.input,
+    backgroundColor: colors.secondaryLight,
+    borderWidth: 1,
+    borderColor: 'rgba(244,162,97,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  stepNumberText: { ...extraStrongText, fontSize: 12, lineHeight: 16, color: colors.primary },
+  stepTitle: {
+    ...strongText,
+    fontSize: 13,
+    lineHeight: 19,
+    color: colors.neutralDark,
+    flex: 1,
+    textAlign: 'left',
+  },
+  stepBody: {
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: spacing.sm,
+  },
+  stepBodyText: {
+    ...typography.body,
+    color: colors.neutralMid,
+    textAlign: 'left',
+    lineHeight: 23,
+  },
+
+  // ── Tips ─────────────────────────────────────────────────────────────────
+  tipCard: {
+    backgroundColor: colors.secondaryLight,
+    borderWidth: 1,
+    borderColor: 'rgba(244,162,97,0.35)',
+    borderRadius: radius.card,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  tipTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  tipTitle: {
+    ...strongText,
+    fontSize: 14,
+    lineHeight: 20,
+    color: colors.accentDark,
+    flex: 1,
+    textAlign: 'left',
+  },
+  tipBody: {
+    ...typography.bodySmall,
+    fontSize: 13,
+    lineHeight: 21,
+    color: colors.neutralMid,
+    textAlign: 'left',
+  },
+
+  // ── Sticky bottom bar ────────────────────────────────────────────────────
+  bottomBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: screenPadding.horizontal,
+    paddingTop: spacing.sm,
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    zIndex: 30,
+    shadowColor: '#3e1d02',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  primaryBtn: {
+    flex: 1,
+    height: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.card,
+    backgroundColor: colors.primary,
     ...elevation.primary,
   },
-  fabText: { fontSize: 24 },
-
-  backButton: {
-    marginTop: spacing.lg,
-    padding: spacing.md,
-    backgroundColor: colors.primary,
-    borderRadius: radius.small,
-  },
-  backButtonText: { ...typography.button, color: colors.white },
+  primaryBtnText: { ...strongText, fontSize: 13.5, lineHeight: 18, color: colors.white },
+  btnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
 });

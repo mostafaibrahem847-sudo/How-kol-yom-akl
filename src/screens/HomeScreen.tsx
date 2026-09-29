@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
@@ -11,14 +11,26 @@ import RecipeCardGrid from '../components/RecipeCardGrid';
 import RecipeViewToggle from '../components/RecipeViewToggle';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
+import { hasRealPhoto } from '../lib/images';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { data: recipes, isLoading, isError, refetch } = useRecipes();
   const mode = useViewMode((s) => s.mode);
   const list = recipes ?? [];
-  const heroRecipe = list[0];
-  const feedRecipes = list.slice(1);
+
+  // The featured card is full-bleed, so it must show a real photo. Take the
+  // first recipe in catalog order that actually has one. Nothing here is tied
+  // to a specific recipe by id or name: if that recipe is deleted, or its image
+  // is cleared, the next eligible recipe is promoted automatically.
+  const heroRecipe = useMemo(() => list.find((r) => hasRealPhoto(r.imageUrl)), [list]);
+
+  // Lift the hero out of the feed wherever it sits (not just when it happens to
+  // be first), so no recipe is ever shown twice on Home.
+  const feedRecipes = useMemo(
+    () => (heroRecipe ? list.filter((r) => r.id !== heroRecipe.id) : list),
+    [list, heroRecipe],
+  );
 
   return (
     <View style={styles.root}>
