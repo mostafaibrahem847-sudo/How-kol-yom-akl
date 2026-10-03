@@ -54,10 +54,6 @@ const MAX_ATTEMPTS = 3;
  */
 const NARRATED_RECIPE_IDS: ReadonlySet<string> = new Set([
   'molokhia',
-  'oxtail',
-  'koshary',
-  'potatoChicken',
-  'chickenPotato',
 ]);
 
 /**

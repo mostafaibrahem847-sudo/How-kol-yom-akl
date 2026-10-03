@@ -98,8 +98,6 @@ from (
          coalesce(v.ord, 100 + row_number() over (order by r2.created_at, r2.id))::int as ord
   from public.recipes r2
   left join (values
-    ('molokhia', 2), ('kofta', 3), ('bechamel', 4), ('oxtail', 5),
-    ('koshary', 6), ('potatoChicken', 7), ('omAli', 8), ('chickenPotato', 9),
     ('hawawshi', 10)
   ) as v(id, ord) on v.id = r2.id
 ) s
