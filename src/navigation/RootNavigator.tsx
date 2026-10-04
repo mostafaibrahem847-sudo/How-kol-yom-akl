@@ -54,8 +54,8 @@ const TAB_ANIMATION_MS = 220;
 const PILL_SLIDE_MS = 270;
 // Matches the old `left: 6` / `right: 6` pill insets inside a tab.
 const PILL_INSET = 6;
-// Soft glass hint behind the near-opaque overlay (25–40 keeps text readable).
-const GLASS_INTENSITY = 32;
+// Blur fallback strength (60–80) keeps the light theme readable over content.
+const GLASS_INTENSITY = 70;
 
 // Honors the OS "Reduce Motion" setting. Defaults to false while the async
 // check resolves, then follows any later changes.
@@ -158,20 +158,12 @@ function TabBarGlass() {
   }
 
   return (
-    <>
-      <BlurView
-        style={styles.tabBarGlass}
-        tint="light"
-        intensity={GLASS_INTENSITY}
-        pointerEvents="none"
-      />
-      {/* Near-opaque cream backing ABOVE the blur and BELOW the tabs, so page
-          text underneath never shows through the bar. */}
-      <View
-        style={[styles.tabBarGlass, styles.tabBarOverlay]}
-        pointerEvents="none"
-      />
-    </>
+    <BlurView
+      style={[styles.tabBarGlass, styles.tabBarBlur]}
+      tint="light"
+      intensity={GLASS_INTENSITY}
+      pointerEvents="none"
+    />
   );
 }
 
@@ -334,9 +326,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  tabBarOverlay: {
-    backgroundColor: colors.secondary,
-    opacity: 0.92,
+  tabBarBlur: {
+    backgroundColor: colors.headerBg,
   },
   tabItem: {
     flex: 1,
