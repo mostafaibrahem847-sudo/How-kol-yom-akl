@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
@@ -13,6 +13,13 @@ import CategoryFilter from '../components/CategoryFilter';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 import { hasRealPhoto } from '../lib/images';
+import {
+  getSessionHeroId,
+  pickHeroId,
+  readLastHeroId,
+  setSessionHeroId,
+  writeLastHeroId,
+} from '../lib/heroPick';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -30,11 +37,51 @@ export default function HomeScreen() {
   const { data, isLoading, isError, refetch } = activeQuery;
   const list = data ?? [];
 
-  // The featured card is full-bleed, so it must show a real photo. Take the
-  // first recipe in catalog order that actually has one. Nothing here is tied
-  // to a specific recipe by id or name: if that recipe is deleted, or its image
-  // is cleared, the next eligible recipe is promoted automatically.
-  const heroRecipe = useMemo(() => list.find((r) => hasRealPhoto(r.imageUrl)), [list]);
+  // The featured card is full-bleed, so it must show a real photo. Candidates
+  // come from the full catalog (not the filtered results); shrimp-scampi is
+  // excluded explicitly because it has no usable image. The choice is random
+  // per cold start and held in heroPick's module scope so it survives Home
+  // remounts for the whole session.
+  const catalogList = useMemo(() => catalogQuery.data ?? [], [catalogQuery.data]);
+  const heroCandidates = useMemo(
+    () => catalogList.filter((r) => hasRealPhoto(r.imageUrl) && r.id !== 'shrimp-scampi'),
+    [catalogList],
+  );
+  const candidateIds = useMemo(() => heroCandidates.map((r) => r.id), [heroCandidates]);
+
+  const [heroId, setHeroId] = useState<string | null>(() => getSessionHeroId());
+
+  useEffect(() => {
+    if (candidateIds.length === 0) return;
+
+    // Already chosen this session and still in the catalog → reuse as-is.
+    const session = getSessionHeroId();
+    if (session && candidateIds.includes(session)) {
+      setHeroId(session);
+      return;
+    }
+
+    // Otherwise choose once for this cold start, avoiding last launch's pick.
+    let cancelled = false;
+    (async () => {
+      const lastId = await readLastHeroId();
+      if (cancelled) return;
+      const chosen = pickHeroId(candidateIds, lastId);
+      if (!chosen) return;
+      setSessionHeroId(chosen);
+      setHeroId(chosen);
+      await writeLastHeroId(chosen);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [candidateIds]);
+
+  const heroRecipe = useMemo(
+    () => (heroId ? catalogList.find((r) => r.id === heroId) ?? null : null),
+    [catalogList, heroId],
+  );
 
   // While a category is active the hero is hidden so the filtered results read
   // unambiguously.
