@@ -10,12 +10,6 @@ import {
   Easing,
   AccessibilityInfo,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
-import {
-  GlassView,
-  isGlassEffectAPIAvailable,
-  isLiquidGlassAvailable,
-} from 'expo-glass-effect';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import HomeScreen from '../screens/HomeScreen';
@@ -54,8 +48,6 @@ const TAB_ANIMATION_MS = 220;
 const PILL_SLIDE_MS = 270;
 // Matches the old `left: 6` / `right: 6` pill insets inside a tab.
 const PILL_INSET = 6;
-// Blur fallback strength (60–80) keeps the light theme readable over content.
-const GLASS_INTENSITY = 70;
 
 // Honors the OS "Reduce Motion" setting. Defaults to false while the async
 // check resolves, then follows any later changes.
@@ -140,33 +132,6 @@ function TabItem({
   );
 }
 
-// Tab-bar surface: native Liquid Glass on iOS 26+, themed blur everywhere else.
-// Purely decorative — `pointerEvents="none"` so it never blocks tab taps.
-function TabBarGlass() {
-  const liquidGlass = isLiquidGlassAvailable() && isGlassEffectAPIAvailable();
-
-  if (liquidGlass) {
-    return (
-      <GlassView
-        style={styles.tabBarGlass}
-        glassEffectStyle="regular"
-        colorScheme="light"
-        tintColor={colors.headerBg}
-        pointerEvents="none"
-      />
-    );
-  }
-
-  return (
-    <BlurView
-      style={[styles.tabBarGlass, styles.tabBarBlur]}
-      tint="light"
-      intensity={GLASS_INTENSITY}
-      pointerEvents="none"
-    />
-  );
-}
-
 function TabBar({ navigation, state }: { navigation: any; state: any }) {
   const insets = useSafeAreaInsets();
   const activeIndex = state.index;
@@ -221,7 +186,6 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
       */}
       <View style={styles.tabBarShadow}>
         <View style={styles.tabBar}>
-          <TabBarGlass />
           {pillWidth > 0 && (
             <Animated.View
               pointerEvents="none"
@@ -301,6 +265,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   tabBarShadow: {
+    backgroundColor: colors.secondary,
     borderRadius: radius.large,
     // iOS/Web shadow (react-native-web maps shadow* to box-shadow; elevation
     // is ignored there).
@@ -315,19 +280,9 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
+    backgroundColor: colors.secondary,
     borderRadius: radius.large,
     overflow: 'hidden',
-  },
-  // Glass/blur surface behind the items. Absolute, so bar height/position are
-  // unchanged; the soft border and blur tint come from theme tokens.
-  tabBarGlass: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.large,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tabBarBlur: {
-    backgroundColor: colors.headerBg,
   },
   tabItem: {
     flex: 1,
