@@ -42,8 +42,12 @@ const ACTIVE_TAB_TINT = 'rgba(154, 19, 7, 0.12)';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
-// 220ms ease-out: quick and settled, no bounce or overshoot.
+// Active icon scale: quick and settled, no bounce or overshoot.
 const TAB_ANIMATION_MS = 220;
+// Pill slide between tabs: measured targets, ease-out, no overshoot.
+const PILL_SLIDE_MS = 270;
+// Matches the old `left: 6` / `right: 6` pill insets inside a tab.
+const PILL_INSET = 6;
 
 // Honors the OS "Reduce Motion" setting. Defaults to false while the async
 // check resolves, then follows any later changes.
@@ -70,14 +74,16 @@ function TabItem({
   isActive,
   reduceMotion,
   onPress,
+  onMeasure,
 }: {
   item: TabItemDef;
   isActive: boolean;
   reduceMotion: boolean;
   onPress: () => void;
+  onMeasure: (x: number, width: number) => void;
 }) {
-  // One value per tab item drives the pill fade (opacity) and the icon scale.
-  // Only opacity/transform are animated — the pill keeps its size and position.
+  // Drives the active icon scale only; the pill is a single shared element in
+  // TabBar that slides between tabs.
   const progress = useRef(new Animated.Value(isActive ? 1 : 0)).current;
 
   useEffect(() => {
@@ -101,11 +107,12 @@ function TabItem({
   });
 
   return (
-    <TouchableOpacity style={styles.tabItem} onPress={onPress} activeOpacity={0.75}>
-      <Animated.View
-        style={[styles.activePill, { opacity: progress }]}
-        pointerEvents="none"
-      />
+    <TouchableOpacity
+      style={styles.tabItem}
+      onPress={onPress}
+      activeOpacity={0.75}
+      onLayout={(e) => onMeasure(e.nativeEvent.layout.x, e.nativeEvent.layout.width)}
+    >
       <Animated.View style={[styles.tabIcon, { transform: [{ scale: iconScale }] }]}>
         <Feather
           name={item.icon}
@@ -130,6 +137,45 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
   const activeIndex = state.index;
   const reduceMotion = useReduceMotion();
 
+  // Measured tab geometry (x, width relative to the bar), captured by onLayout.
+  // All tabs share flex:1, so the pill width comes from the first measurement
+  // and is never resized.
+  const layoutsRef = useRef<({ x: number; width: number } | null)[]>([]);
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+  const [pillWidth, setPillWidth] = useState(0);
+  const translateX = useRef(new Animated.Value(0)).current;
+
+  const handleTabLayout = (index: number, x: number, width: number) => {
+    layoutsRef.current[index] = { x, width };
+    setPillWidth((prev) => (prev === 0 ? Math.max(0, width - PILL_INSET * 2) : prev));
+    // First placement is immediate — no slide on app start / first layout.
+    if (index === activeIndexRef.current) {
+      translateX.setValue(x + PILL_INSET);
+    }
+  };
+
+  // Slide only when the active tab changes (on mount the pill was already
+  // placed by onLayout). Horizontal position only — no width/height/margin.
+  useEffect(() => {
+    const layout = layoutsRef.current[activeIndex];
+    if (!layout) return;
+
+    const target = layout.x + PILL_INSET;
+    if (reduceMotion) {
+      translateX.setValue(target);
+      return;
+    }
+    const animation = Animated.timing(translateX, {
+      toValue: target,
+      duration: PILL_SLIDE_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [activeIndex, reduceMotion, translateX]);
+
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 10 }]}>
       {/*
@@ -140,6 +186,15 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
       */}
       <View style={styles.tabBarShadow}>
         <View style={styles.tabBar}>
+          {pillWidth > 0 && (
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.activePill,
+                { width: pillWidth, transform: [{ translateX }] },
+              ]}
+            />
+          )}
           {TAB_ITEMS.map((item, index) => (
             <TabItem
               key={item.key}
@@ -147,6 +202,7 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
               isActive={index === activeIndex}
               reduceMotion={reduceMotion}
               onPress={() => navigation.navigate(item.key)}
+              onMeasure={(x, width) => handleTabLayout(index, x, width)}
             />
           ))}
         </View>
@@ -240,8 +296,7 @@ const styles = StyleSheet.create({
   activePill: {
     position: 'absolute',
     top: 4,
-    left: 6,
-    right: 6,
+    left: 0,
     height: 40,
     backgroundColor: ACTIVE_TAB_TINT,
     borderRadius: 20,
