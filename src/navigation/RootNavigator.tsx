@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
   },
   tabBarShadow: {
     backgroundColor: colors.secondary,
-    opacity: 0.88,
+    opacity: 0.80,
     borderRadius: radius.large,
     // iOS/Web shadow (react-native-web maps shadow* to box-shadow; elevation
     // is ignored there).
