@@ -5,7 +5,6 @@ import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import HomeScreen from '../screens/HomeScreen';
-import SearchScreen from '../screens/SearchScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import RecipeDetailScreen from '../screens/RecipeDetailScreen';
@@ -15,13 +14,12 @@ import SignUpScreen from '../screens/SignUpScreen';
 import { colors, radius, typography, elevation } from '../theme';
 import { t } from '../i18n/strings';
 
-type TabKey = 'Home' | 'Search' | 'Favorites' | 'Profile';
+type TabKey = 'Home' | 'Favorites' | 'Profile';
 
 type TabIconName = keyof typeof Feather.glyphMap;
 
 const TAB_ITEMS: { key: TabKey; label: string; icon: TabIconName }[] = [
   { key: 'Home', label: t.nav.home, icon: 'home' },
-  { key: 'Search', label: t.nav.search, icon: 'search' },
   { key: 'Favorites', label: t.nav.favorites, icon: 'heart' },
   { key: 'Profile', label: t.nav.account, icon: 'user' },
 ];
@@ -92,7 +90,6 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t.nav.home }} />
-      <Tab.Screen name="Search" component={SearchScreen} options={{ title: t.nav.search }} />
       <Tab.Screen name="Favorites" component={FavoritesScreen} options={{ title: t.nav.favorites }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{ title: t.nav.account }} />
     </Tab.Navigator>
