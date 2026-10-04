@@ -10,7 +10,6 @@ import {
   Easing,
   AccessibilityInfo,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import HomeScreen from '../screens/HomeScreen';
@@ -187,13 +186,6 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
       */}
       <View style={styles.tabBarShadow}>
         <View style={styles.tabBar}>
-          <LinearGradient
-            colors={['rgba(255,255,255,0.25)', 'rgba(255,255,255,0)']}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={styles.tabBarSurface}
-            pointerEvents="none"
-          />
           {pillWidth > 0 && (
             <Animated.View
               pointerEvents="none"
@@ -273,33 +265,24 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   tabBarShadow: {
+    backgroundColor: colors.secondary,
     borderRadius: radius.large,
     // iOS/Web shadow (react-native-web maps shadow* to box-shadow; elevation
     // is ignored there).
     ...elevation.cardResting,
     shadowColor: '#3e1d02',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
+    shadowOpacity: 0.5,
+    shadowRadius: 15,
     // Android: elevation renders the shadow on real devices (shadow* props
     // alone do nothing on Android).
-    elevation: 4,
+    elevation: 16,
   },
   tabBar: {
     flexDirection: 'row',
+    backgroundColor: colors.secondary,
     borderRadius: radius.large,
     overflow: 'hidden',
-  },
-  // Single decorative surface: translucent cream + light edge highlight +
-  // faint top gradient. Absolute and pointerEvents="none", so it sits behind
-  // the items and never blocks taps.
-  tabBarSurface: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: radius.large,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.75)',
-    backgroundColor: colors.secondary,
-    opacity: 0.94,
   },
   tabItem: {
     flex: 1,
