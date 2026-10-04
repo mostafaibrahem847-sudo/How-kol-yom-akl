@@ -133,7 +133,7 @@ export default function SignUpScreen() {
             keyboardType="email-address"
             autoComplete="email"
             textContentType="emailAddress"
-            align="right"
+            align="left"
             returnKeyType="next"
           />
           <AuthTextInput
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutralSurface,
     marginBottom: spacing.lg,
   },
-  title: { ...typography.h1, color: colors.neutralDark, textAlign: 'right' },
+  title: { ...typography.h1, color: colors.neutralDark, textAlign: 'left' },
   subtitle: {
     ...typography.body,
     color: colors.neutralMuted,

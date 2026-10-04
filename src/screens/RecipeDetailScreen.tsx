@@ -324,14 +324,14 @@ export default function RecipeDetailScreen() {
           <LinearGradient
             colors={HERO_FADE_DOWN}
             start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
+            end={{ x: 0.5, y: 2 }}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
           <LinearGradient
             colors={HERO_FADE_UP}
             start={{ x: 0.5, y: 1 }}
-            end={{ x: 0.5, y: 0 }}
+            end={{ x: 0.5, y: 0.1 }}
             style={StyleSheet.absoluteFill}
             pointerEvents="none"
           />
