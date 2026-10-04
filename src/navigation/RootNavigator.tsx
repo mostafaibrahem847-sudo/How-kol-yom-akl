@@ -1,7 +1,15 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Easing,
+  AccessibilityInfo,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import HomeScreen from '../screens/HomeScreen';
@@ -18,7 +26,9 @@ type TabKey = 'Home' | 'Favorites' | 'Profile';
 
 type TabIconName = keyof typeof Feather.glyphMap;
 
-const TAB_ITEMS: { key: TabKey; label: string; icon: TabIconName }[] = [
+type TabItemDef = { key: TabKey; label: string; icon: TabIconName };
+
+const TAB_ITEMS: TabItemDef[] = [
   { key: 'Home', label: t.nav.home, icon: 'home' },
   { key: 'Favorites', label: t.nav.favorites, icon: 'heart' },
   { key: 'Profile', label: t.nav.account, icon: 'user' },
@@ -32,9 +42,93 @@ const ACTIVE_TAB_TINT = 'rgba(154, 19, 7, 0.12)';
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+// 220ms ease-out: quick and settled, no bounce or overshoot.
+const TAB_ANIMATION_MS = 220;
+
+// Honors the OS "Reduce Motion" setting. Defaults to false while the async
+// check resolves, then follows any later changes.
+function useReduceMotion(): boolean {
+  const [reduceMotion, setReduceMotion] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((enabled) => {
+      if (mounted) setReduceMotion(enabled);
+    });
+    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduceMotion);
+    return () => {
+      mounted = false;
+      subscription.remove();
+    };
+  }, []);
+
+  return reduceMotion;
+}
+
+function TabItem({
+  item,
+  isActive,
+  reduceMotion,
+  onPress,
+}: {
+  item: TabItemDef;
+  isActive: boolean;
+  reduceMotion: boolean;
+  onPress: () => void;
+}) {
+  // One value per tab item drives the pill fade (opacity) and the icon scale.
+  // Only opacity/transform are animated — the pill keeps its size and position.
+  const progress = useRef(new Animated.Value(isActive ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (reduceMotion) {
+      progress.setValue(isActive ? 1 : 0);
+      return;
+    }
+    const animation = Animated.timing(progress, {
+      toValue: isActive ? 1 : 0,
+      duration: TAB_ANIMATION_MS,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [isActive, reduceMotion, progress]);
+
+  const iconScale = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.92, 1],
+  });
+
+  return (
+    <TouchableOpacity style={styles.tabItem} onPress={onPress} activeOpacity={0.75}>
+      <Animated.View
+        style={[styles.activePill, { opacity: progress }]}
+        pointerEvents="none"
+      />
+      <Animated.View style={[styles.tabIcon, { transform: [{ scale: iconScale }] }]}>
+        <Feather
+          name={item.icon}
+          size={22}
+          color={isActive ? ACTIVE_TAB_ACCENT : colors.neutralMuted}
+        />
+      </Animated.View>
+      <Text
+        style={[
+          styles.tabLabel,
+          isActive ? styles.tabLabelActive : styles.tabLabelInactive,
+        ]}
+      >
+        {item.label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function TabBar({ navigation, state }: { navigation: any; state: any }) {
   const insets = useSafeAreaInsets();
   const activeIndex = state.index;
+  const reduceMotion = useReduceMotion();
 
   return (
     <View style={[styles.tabBarContainer, { paddingBottom: insets.bottom + 10 }]}>
@@ -46,33 +140,15 @@ function TabBar({ navigation, state }: { navigation: any; state: any }) {
       */}
       <View style={styles.tabBarShadow}>
         <View style={styles.tabBar}>
-          {TAB_ITEMS.map((item, index) => {
-            const isActive = index === activeIndex;
-            return (
-              <TouchableOpacity
-                key={item.key}
-                style={styles.tabItem}
-                onPress={() => navigation.navigate(item.key)}
-                activeOpacity={0.75}
-              >
-                {isActive && <View style={styles.activePill} />}
-                <Feather
-                  name={item.icon}
-                  size={22}
-                  color={isActive ? ACTIVE_TAB_ACCENT : colors.neutralMuted}
-                  style={styles.tabIcon}
-                />
-                <Text
-                  style={[
-                    styles.tabLabel,
-                    isActive ? styles.tabLabelActive : styles.tabLabelInactive,
-                  ]}
-                >
-                  {item.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {TAB_ITEMS.map((item, index) => (
+            <TabItem
+              key={item.key}
+              item={item}
+              isActive={index === activeIndex}
+              reduceMotion={reduceMotion}
+              onPress={() => navigation.navigate(item.key)}
+            />
+          ))}
         </View>
       </View>
     </View>
