@@ -1,23 +1,34 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
-import { useRecipes } from '../data/queries';
+import { useRecipes, useRecipeCategories, useRecipeSearch } from '../data/queries';
 import RecipeCard from '../components/RecipeCard';
 import RecipeCardList from '../components/RecipeCardList';
 import RecipeCardGrid from '../components/RecipeCardGrid';
 import RecipeViewToggle from '../components/RecipeViewToggle';
+import CategoryFilter from '../components/CategoryFilter';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 import { hasRealPhoto } from '../lib/images';
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const { data: recipes, isLoading, isError, refetch } = useRecipes();
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const mode = useViewMode((s) => s.mode);
-  const list = recipes ?? [];
+
+  // No category = the shared cached catalog Home always used. A selected chip
+  // switches to the same server-side category query Search uses, so the filter
+  // is real data, not a decorative row.
+  const catalogQuery = useRecipes();
+  const categoriesQuery = useRecipeCategories();
+  const isFiltering = selectedCategory !== null;
+  const searchQuery = useRecipeSearch('', selectedCategory, { enabled: isFiltering });
+  const activeQuery = isFiltering ? searchQuery : catalogQuery;
+  const { data, isLoading, isError, refetch } = activeQuery;
+  const list = data ?? [];
 
   // The featured card is full-bleed, so it must show a real photo. Take the
   // first recipe in catalog order that actually has one. Nothing here is tied
@@ -25,11 +36,15 @@ export default function HomeScreen() {
   // is cleared, the next eligible recipe is promoted automatically.
   const heroRecipe = useMemo(() => list.find((r) => hasRealPhoto(r.imageUrl)), [list]);
 
+  // While a category is active the hero is hidden so the filtered results read
+  // unambiguously.
+  const showHero = !isFiltering;
+
   // Lift the hero out of the feed wherever it sits (not just when it happens to
   // be first), so no recipe is ever shown twice on Home.
   const feedRecipes = useMemo(
-    () => (heroRecipe ? list.filter((r) => r.id !== heroRecipe.id) : list),
-    [list, heroRecipe],
+    () => (showHero && heroRecipe ? list.filter((r) => r.id !== heroRecipe.id) : list),
+    [list, heroRecipe, showHero],
   );
 
   return (
@@ -41,8 +56,8 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>{t.home.subtitle}</Text>
         </View>
 
-        {/* Hero Card */}
-        {heroRecipe && (
+        {/* Hero Card (hidden while a category filter is active) */}
+        {showHero && heroRecipe && (
           <View style={styles.heroWrapper}>
             <RecipeCard
               recipe={heroRecipe}
@@ -51,14 +66,13 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Filter chips row */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {Object.entries(t.home.filters).map(([key, label]) => (
-            <TouchableOpacity key={key} style={styles.filterChip} activeOpacity={0.8}>
-              <Text style={styles.filterChipText}>{label}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        {/* Category filter (shared with Search) */}
+        <CategoryFilter
+          categories={categoriesQuery.data ?? []}
+          selected={selectedCategory}
+          onSelect={setSelectedCategory}
+          allLabel={t.search.filters.all}
+        />
 
         {/* Feed heading with the view switcher on the physical left */}
         <View style={styles.feedHeaderRow}>
@@ -127,7 +141,6 @@ const styles = StyleSheet.create({
   greetingText: { ...typography.h1, color: colors.neutralDark, marginBottom: spacing.sm },
   subtitle: { ...typography.bodyLarge, color: colors.neutralMid },
   heroWrapper: { marginBottom: spacing.xl, alignItems: 'center' },
-  filterRow: { paddingBottom: spacing.md, gap: spacing.sm },
   filterChip: {
     backgroundColor: colors.neutralSurface,
     paddingHorizontal: spacing.md,

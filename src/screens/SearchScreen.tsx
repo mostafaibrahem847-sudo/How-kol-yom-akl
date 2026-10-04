@@ -10,6 +10,7 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import RecipeCardList from '../components/RecipeCardList';
 import RecipeCardGrid from '../components/RecipeCardGrid';
 import RecipeViewToggle from '../components/RecipeViewToggle';
+import CategoryFilter from '../components/CategoryFilter';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 import { useNavigation } from '@react-navigation/native';
@@ -72,28 +73,13 @@ export default function SearchScreen() {
           <Text style={styles.voiceChipText}>🎙️ {t.search.voice}</Text>
         </TouchableOpacity>
 
-        {/* Filter chips — canonical categories from Supabase + "الكل" */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-          {[t.search.filters.all, ...(categoriesQuery.data ?? [])].map((label) => {
-            const isAllChip = label === t.search.filters.all;
-            const isActive = isAllChip ? selectedCategory === null : selectedCategory === label;
-            return (
-              <TouchableOpacity
-                key={label}
-                style={[styles.filterChip, isActive && styles.filterChipActive]}
-                activeOpacity={0.8}
-                hitSlop={{ top: 5, bottom: 5 }}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isActive }}
-                onPress={() => setSelectedCategory(isAllChip || isActive ? null : label)}
-              >
-                <Text style={[styles.filterChipText, isActive && styles.filterChipTextActive]}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {/* Filter chips — canonical categories, shared with Home */}
+        <CategoryFilter
+          categories={categoriesQuery.data ?? []}
+          selected={selectedCategory}
+          onSelect={setSelectedCategory}
+          allLabel={t.search.filters.all}
+        />
 
         {/* Results count (hidden while the query is in the error state —
             "found 0" would read as a real answer next to the error message) */}
@@ -211,7 +197,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   voiceChipText: { ...typography.label, color: colors.white },
-  filterRow: { gap: spacing.sm, paddingBottom: spacing.md },
   filterChip: {
     backgroundColor: colors.neutralSurface,
     borderRadius: 9999,
@@ -222,10 +207,6 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   filterChipText: { ...typography.label, color: colors.neutralMid },
-  // Selected chip: same shape, primary fill — mirrors the app's existing
-  // active-pill language (FavoritesScreen pillActive).
-  filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  filterChipTextActive: { color: colors.white },
   resultsLabel: { ...typography.body, color: colors.neutralMuted, marginBottom: spacing.md },
   // Toggle aligned to the physical left edge (RTL: flex-end resolves to left).
   toolbarRow: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: spacing.md },
