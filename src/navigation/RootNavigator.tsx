@@ -177,6 +177,10 @@ const styles = StyleSheet.create({
   tabIcon: {
     zIndex: 1,
   },
+  // Shared metrics for every tab label. `typography.labelSm` already pins the
+  // family + fontWeight: 'normal'; the active state must only recolor it, never
+  // re-weight it (a stray fontWeight here would synthesise a different face on
+  // the active tab).
   tabLabel: {
     ...typography.labelSm,
     marginTop: 2,
@@ -185,7 +189,6 @@ const styles = StyleSheet.create({
   },
   tabLabelActive: {
     color: ACTIVE_TAB_ACCENT,
-    fontWeight: '700',
   },
   tabLabelInactive: {
     color: colors.neutralMuted,
