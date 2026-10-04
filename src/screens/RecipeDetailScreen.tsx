@@ -31,6 +31,7 @@ import { RootStackParamList } from '../navigation/RootNavigator';
 import { t } from '../i18n/strings';
 import { toArabicNumerals } from '../i18n/numerals';
 import { useAudioPlayerHook } from '../hooks/useAudioPlayer';
+import { hasRealAudio } from '../lib/audio';
 import VoiceAssistantCard from '../components/VoiceAssistantCard';
 import ListenButton from '../components/ListenButton';
 
@@ -251,8 +252,7 @@ export default function RecipeDetailScreen() {
 
   const totalCount = recipe.ingredients?.length ?? 0;
   const checkedCount = checkedIngredients.size;
-  const hasAudio = Boolean(recipe.audioUrl);
-  const showAudio = Boolean(recipe.audioAvailable) || hasAudio;
+  const showAudio = hasRealAudio(recipe.audioUrl);
 
   const firstStepId = recipe.steps?.[0]?.id ?? null;
   const effectiveOpenStep = openStep === undefined ? firstStepId : openStep;
@@ -388,7 +388,9 @@ export default function RecipeDetailScreen() {
         </View>
 
         {/* ── Narration card ───────────────────────────────────────────────── */}
-        <VoiceAssistantCard recipeId={recipe.id} enabled={showAudio} audio={audio} />
+        {showAudio ? (
+          <VoiceAssistantCard recipeId={recipe.id} enabled={showAudio} audio={audio} />
+        ) : null}
 
         {/* ── Section tabs + content ───────────────────────────────────────── */}
         <View style={styles.section}>
@@ -522,7 +524,9 @@ export default function RecipeDetailScreen() {
 
       {/* ── Sticky bottom action bar ──────────────────────────────────────── */}
       <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.sm }]}>
-        <ListenButton recipeId={recipe.id} enabled={showAudio} audio={audio} />
+        {showAudio ? (
+          <ListenButton recipeId={recipe.id} enabled={showAudio} audio={audio} />
+        ) : null}
 
         <Pressable
           style={({ pressed }) => [styles.primaryBtn, pressed && styles.btnPressed]}
