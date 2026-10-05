@@ -10,6 +10,7 @@ import {
   radius,
   fontWeight,
   fontFamily,
+  fontFamilyFor,
 } from '../theme';
 import { Recipe } from '../types/recipe';
 import CategoryChip from './CategoryChip';
@@ -150,7 +151,9 @@ const styles = StyleSheet.create({
     color: colors.neutralDark,
     marginBottom: spacing.xs,
   },
-  heroTitle: { ...typography.h1, fontSize: 28 },
+  // Same family/weight as the RecipeDetail title (fontFamilyFor('800'));
+  // fontSize is reduced to fit the hero card.
+  heroTitle: { ...typography.h1, fontFamily: fontFamilyFor('800'), fontSize: 28 },
   subtitle: {
     ...typography.body,
     color: colors.neutralMuted,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, spacing, radius, elevation, fontWeight, fontFamily } from '../theme';
+import { colors, spacing, radius, elevation, fontFamilyFor } from '../theme';
 import { Recipe } from '../types/recipe';
 import CategoryChip from './CategoryChip';
 import RecipeCardMedia from './RecipeCardMedia';
@@ -86,10 +86,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   title: {
-    fontFamily,
+    // Same family/weight as the RecipeDetail title (fontFamilyFor('800'));
+    // fontSize stays reduced to fit the list card.
+    fontFamily: fontFamilyFor('800'),
     fontSize: 15,
     lineHeight: 21,
-    fontWeight: fontWeight.bold,
+    fontWeight: 'normal',
     color: colors.neutralDark,
     marginTop: 6,
   },
