@@ -1,16 +1,41 @@
-# هو كل يوم أكل (Howa Kol Yom Akl)
+<h1 align="center">هو كل يوم أكل</h1>
+
+<p align="center"><strong>Howa Kol Yom Akl</strong> · A voice-first Egyptian Arabic recipe app</p>
+
+<p align="center">
+  <img alt="Expo SDK 57" src="https://img.shields.io/badge/Expo-SDK%2057-000020?logo=expo&logoColor=white">
+  <img alt="React Native 0.86" src="https://img.shields.io/badge/React%20Native-0.86-61DAFB?logo=react&logoColor=white">
+  <img alt="TypeScript strict" src="https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white">
+  <img alt="Platforms" src="https://img.shields.io/badge/platforms-Android%20%7C%20Web%20%7C%20iOS-3DDC84">
+  <img alt="Status" src="https://img.shields.io/badge/status-active%20development-D97757">
+</p>
+
+---
 
 An Arabic-first (Egyptian) recipe app for React Native, Android and the web, built with Expo. The goal is a warm, fast, **voice-first** cooking companion — a trusted "relative in the kitchen" that reads recipes out loud in Egyptian colloquial Arabic while your hands are busy.
 
-> **Status: active development.** The app is a working product on a live Supabase backend: 50 recipes, Clerk authentication, server-side Arabic-aware search, persistent favorites, and real narrated MP3s (ElevenLabs / Edge TTS) served from Supabase Storage. See [Project Status](#10-project-status) for what is done and what is still open.
+> **Status: active development.** The app is a working product on a live Supabase backend: 50 recipes, Clerk authentication, server-side Arabic-aware search, persistent favorites, and real narrated MP3s (ElevenLabs / Edge TTS) served from Supabase Storage. See [Project Status](#11-project-status) for what is done and what is still open.
 
-**Quick links:** [Overview](#1-overview) · [Features](#2-features) · [Stack](#3-tech-stack) · [Architecture](#4-architecture) · [Structure](#5-project-structure) · [Setup](#6-setup) · [Backend](#8-backend-supabase) · [Auth](#9-authentication-clerk) · [Narration](#10-narration-pipeline) · [Status](#11-project-status) · [Roadmap](#12-roadmap) · [Conventions](#13-development-conventions)
+<p align="center">
+  <a href="#1-overview">Overview</a> ·
+  <a href="#2-features">Features</a> ·
+  <a href="#3-tech-stack">Stack</a> ·
+  <a href="#4-architecture">Architecture</a> ·
+  <a href="#5-project-structure">Structure</a> ·
+  <a href="#6-setup">Setup</a> ·
+  <a href="#8-backend-supabase">Backend</a> ·
+  <a href="#9-authentication-clerk">Auth</a> ·
+  <a href="#10-narration-pipeline">Narration</a> ·
+  <a href="#11-project-status">Status</a> ·
+  <a href="#12-roadmap">Roadmap</a> ·
+  <a href="#13-development-conventions">Conventions</a>
+</p>
 
 ---
 
 ## 1. Overview
 
-هو كل يوم أكل ("Howa Kol Yom Akl") helps Egyptian home cooks find reliable recipes quickly and follow them **without reading** — written recipes are hard to use mid-cooking, and hands covered in flour can't scroll. Every recipe has a dedicated page with ingredients, written steps, tips, and an audio narration button that plays real Egyptian-Arabic voice-over.
+**Howa Kol Yom Akl** (<bdi dir="rtl">هو كل يوم أكل</bdi>) helps Egyptian home cooks find reliable recipes quickly and follow them **without reading** — written recipes are hard to use mid-cooking, and hands covered in flour can't scroll. Every recipe has a dedicated page with ingredients, written steps, tips, and an audio narration button that plays real Egyptian-Arabic voice-over.
 
 Egyptian colloquial Arabic is the product's language throughout: UI copy, recipe content, and narration. Not Modern Standard Arabic.
 
@@ -21,14 +46,14 @@ Egyptian colloquial Arabic is the product's language throughout: UI copy, recipe
 ### Recipes & browsing
 - **Home screen** — greeting, a rotating featured hero card (one random recipe per app launch, never the same twice in a row), a search box, a category filter row (real filtering, derived from the live catalog), a list/grid view toggle (persisted), and the recipe feed.
 - **Recipe detail** — full-bleed hero, title/description, stats (time, servings, difficulty, rating), tabbed **Ingredients / Steps / Tips** sections, favorite toggle, native share, and a **Listen** button for recipes with real narration.
-- **Search** — server-side, bounded, per-column `ILIKE` matching over title, description, and category, plus category chips. Works for colloquial input (`ملوخ` → `ملوخية`, `شاميل` → `بشاميل`). Results are cached per term/category by React Query.
+- **Search** — server-side, bounded, per-column `ILIKE` matching over title, description, and category, plus category chips. Works for colloquial input — <bdi dir="rtl"><code>ملوخ</code> → <code>ملوخية</code>, <code>شاميل</code> → <code>بشاميل</code></bdi>. Results are cached per term/category by React Query.
 - **Favorites** — persisted to device storage (`AsyncStorage`), so they survive restarts. Hydration-safe: a toggle made before storage loads is never clobbered. Stale ids are pruned against the live catalog.
 - **Catalog integrity guard** — a dev-only check logs duplicate or missing recipe ids, since ids are the navigation key everywhere.
 
 ### Interface
 - **Arabic RTL throughout** — `I18nManager` on native, `dir="rtl"` on the web root, single source of truth in `src/i18n/rtl.ts`.
 - **Cairo font**, shipped as real per-weight static files (`fontFamilyFor(weight)`), so no synthesised bold on any platform.
-- **Three tabs** (الرئيسية / المفضلة / حسابي) with a custom bottom bar: sliding active pill, icon scale, and `Reduce Motion` support. Search lives on Home, not as its own tab.
+- **Three tabs** (<bdi dir="rtl">الرئيسية / المفضلة / حسابي</bdi>) with a custom bottom bar: sliding active pill, icon scale, and `Reduce Motion` support. Search lives on Home, not as its own tab.
 - **Design tokens** in `src/theme` (colors, spacing, typography, elevation, shared responsive frame) mirroring `design.md`.
 - **Eastern-Arabic numerals** for quantities via `src/i18n/numerals.ts`.
 
