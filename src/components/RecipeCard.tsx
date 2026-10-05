@@ -13,6 +13,7 @@ import {
   fontFamilyFor,
 } from '../theme';
 import { Recipe } from '../types/recipe';
+import { cardImageUrl } from '../lib/imageUrl';
 import CategoryChip from './CategoryChip';
 import { toArabicNumerals } from '../i18n/numerals';
 import { t } from '../i18n/strings';
@@ -32,7 +33,7 @@ export default function RecipeCard({ recipe, onPress }: Props) {
       {/* Image */}
       <View style={styles.imageWrap}>
         {recipe.imageUrl ? (
-          <Image source={{ uri: recipe.imageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: cardImageUrl(recipe.imageUrl) }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={styles.imagePlaceholder}>
             <Text style={styles.imagePlaceholderText}>{recipe.title.slice(0, 2)}</Text>

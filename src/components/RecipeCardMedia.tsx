@@ -11,6 +11,7 @@ import {
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { colors, spacing, radius, fontWeight, fontFamily } from '../theme';
 import { Recipe } from '../types/recipe';
+import { cardImageUrl } from '../lib/imageUrl';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
 
@@ -30,7 +31,7 @@ export default function RecipeCardMedia({ recipe, style }: Props) {
   return (
     <View style={[styles.media, style]}>
       {recipe.imageUrl ? (
-        <Image source={{ uri: recipe.imageUrl }} style={styles.image} resizeMode="cover" />
+        <Image source={{ uri: cardImageUrl(recipe.imageUrl) }} style={styles.image} resizeMode="cover" />
       ) : (
         <View style={styles.placeholder}>
           <Text style={styles.placeholderText}>{recipe.title.slice(0, 2)}</Text>
