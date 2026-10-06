@@ -80,8 +80,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   noteIcon: { marginTop: 1 },
-  noteText: { ...typography.bodySmall, color: colors.neutralMid, flex: 1, textAlign: 'right' },
+  noteText: { ...typography.bodySmall, color: colors.neutralMid, flex: 1, textAlign: 'left' },
   section: { marginBottom: spacing.lg, gap: spacing.xs },
-  sectionTitle: { ...typography.h3, color: colors.neutralDark, textAlign: 'right' },
-  sectionBody: { ...typography.body, color: colors.neutralMid, textAlign: 'right' },
+  sectionTitle: { ...typography.h3, color: colors.neutralDark, textAlign: 'left' },
+  sectionBody: { ...typography.body, color: colors.neutralMid, textAlign: 'left' },
 });
