@@ -15,10 +15,13 @@ type FeatherName = keyof typeof Feather.glyphMap;
 type SettingRowProps = {
   icon: FeatherName;
   label: string;
+  /** Secondary line under the title (a current value, or an availability status). */
   note?: string;
   iconColor?: string;
-  /** Only rows that actually do something get a chevron and a pressed state. */
+  /** Present only when the row actually does something. */
   onPress?: () => void;
+  /** Unavailable action (e.g. "coming soon"): muted, no chevron, no press. */
+  disabled?: boolean;
 };
 
 const SettingRow = ({
@@ -27,24 +30,28 @@ const SettingRow = ({
   note,
   iconColor = colors.neutralMuted,
   onPress,
+  disabled,
 }: SettingRowProps) => {
+  const tappable = !!onPress && !disabled;
+
   const row = (
-    <View style={styles.settingRow}>
-      <Feather name={icon} size={20} color={iconColor} style={styles.settingIcon} />
+    <View
+      style={[styles.settingRow, disabled && styles.settingRowDisabled]}
+      accessibilityState={disabled ? { disabled: true } : undefined}
+    >
+      <Feather name={icon} size={20} color={iconColor} />
       <View style={styles.settingContent}>
         <Text style={styles.settingLabel}>{label}</Text>
         {note ? <Text style={styles.settingNote}>{note}</Text> : null}
       </View>
-      {onPress ? (
-        <Feather name="chevron-left" size={20} color={colors.neutralLight} style={styles.settingArrow} />
-      ) : null}
+      {tappable ? <Feather name="chevron-left" size={20} color={colors.neutralLight} /> : null}
     </View>
   );
 
-  if (!onPress) return row;
+  if (!tappable) return row;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7} accessibilityRole="button">
+    <TouchableOpacity onPress={onPress} activeOpacity={0.6} accessibilityRole="button">
       {row}
     </TouchableOpacity>
   );
@@ -152,13 +159,21 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('Favorites')}
           />
           <View style={styles.divider} />
-          <SettingRow icon="bell" label={t.profile.notifications} note={t.profile.comingSoon} />
+          <SettingRow
+            icon="bell"
+            label={t.profile.notifications}
+            note={t.profile.comingSoon}
+            disabled
+          />
           <View style={styles.divider} />
           <SettingRow icon="volume-2" label={t.profile.soundSettings} note={t.profile.soundNote} />
           <View style={styles.divider} />
           <SettingRow icon="globe" label={t.profile.language} note={t.profile.languageValue} />
           <View style={styles.divider} />
-          <SettingRow icon="info" label={t.profile.about} note={t.profile.version} />
+          <View style={styles.aboutFooter}>
+            <Text style={styles.aboutLabel}>{t.profile.about}</Text>
+            <Text style={styles.aboutVersion}>{t.profile.version}</Text>
+          </View>
         </View>
 
         <Text style={styles.footer}>{t.app.tagline}</Text>
@@ -207,16 +222,24 @@ const styles = StyleSheet.create({
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 44,
+    gap: spacing.md,
+    minHeight: 56,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  settingRowDisabled: { opacity: 0.55 },
+  settingContent: { flex: 1, gap: spacing.xs },
+  settingLabel: { ...typography.body, color: colors.neutralDark },
+  settingNote: { ...typography.bodySmall, color: colors.neutralMuted },
+  divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
+  aboutFooter: {
+    alignItems: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
   },
-  settingIcon: { marginRight: spacing.md },
-  settingContent: { flex: 1 },
-  settingLabel: { ...typography.body, color: colors.neutralDark },
-  settingNote: { ...typography.bodySmall, color: colors.neutralMuted },
-  settingArrow: { color: colors.neutralLight },
-  divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.md },
+  aboutLabel: { ...typography.bodySmall, color: colors.neutralMuted, textAlign: 'center' },
+  aboutVersion: { ...typography.caption, color: colors.neutralLight, textAlign: 'center' },
   footer: { ...typography.body, color: colors.neutralMuted, textAlign: 'center', marginBottom: spacing.xs },
   footerLight: { ...typography.caption, color: colors.neutralLight, textAlign: 'center' },
 });
