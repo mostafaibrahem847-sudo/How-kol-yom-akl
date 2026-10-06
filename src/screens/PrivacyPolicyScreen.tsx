@@ -8,7 +8,7 @@ import { t } from '../i18n/strings';
 
 /**
  * Placeholder privacy policy. The body text lives in `t.legal.privacySections`;
- * the note at the top makes clear it has not been legally reviewed yet.
+ * the note at the top marks it as a temporary simplified draft.
  */
 export default function PrivacyPolicyScreen() {
   const navigation = useNavigation<any>();
@@ -35,7 +35,7 @@ export default function PrivacyPolicyScreen() {
             color={colors.primaryDeep}
             style={styles.noteIcon}
           />
-          <Text style={styles.noteText}>{t.legal.placeholderNote}</Text>
+          <Text style={styles.noteText}>{t.legal.draftNote}</Text>
         </View>
 
         {t.legal.privacySections.map((section) => (

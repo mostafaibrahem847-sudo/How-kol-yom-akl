@@ -8,7 +8,7 @@ import { t } from '../i18n/strings';
 
 /**
  * Placeholder terms of use. The body text lives in `t.legal.termsSections`;
- * the note at the top makes clear it has not been legally reviewed yet.
+ * the note at the top marks it as a temporary simplified draft.
  */
 export default function TermsScreen() {
   const navigation = useNavigation<any>();
@@ -35,7 +35,7 @@ export default function TermsScreen() {
             color={colors.primaryDeep}
             style={styles.noteIcon}
           />
-          <Text style={styles.noteText}>{t.legal.placeholderNote}</Text>
+          <Text style={styles.noteText}>{t.legal.draftNote}</Text>
         </View>
 
         {t.legal.termsSections.map((section) => (
@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.neutralSurface,
     marginBottom: spacing.lg,
   },
-  title: { ...typography.h1, color: colors.neutralDark, textAlign: 'right' },
+  title: { ...typography.h1, color: colors.neutralDark, textAlign: 'left' },
   noteBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
