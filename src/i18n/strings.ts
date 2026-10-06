@@ -177,7 +177,7 @@ export const t = {
       },
       {
         title: 'التواصل',
-        body: 'للتواصل أو طلب حذف بياناتك، راسلنا على: [CONTACT_EMAIL]',
+        body: 'للتواصل أو طلب حذف بياناتك، راسلنا على: howkolyomakl@gmail.com',
       },
     ],
     termsSections: [
@@ -195,7 +195,7 @@ export const t = {
       },
       {
         title: 'التواصل',
-        body: 'للتواصل أو طلب حذف بياناتك، راسلنا على: [CONTACT_EMAIL]',
+        body: 'للتواصل أو طلب حذف بياناتك، راسلنا على: howkolyomakl@gmail.com',
       },
     ],
   },
