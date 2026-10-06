@@ -19,6 +19,8 @@ import RecipeDetailScreen from '../screens/RecipeDetailScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignInScreen from '../screens/SignInScreen';
 import SignUpScreen from '../screens/SignUpScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import TermsScreen from '../screens/TermsScreen';
 import { colors, radius, typography, elevation } from '../theme';
 import { t } from '../i18n/strings';
 
@@ -234,6 +236,8 @@ export type RootStackParamList = {
   SignUp: undefined;
   Tabs: { screen?: TabKey } | undefined;
   RecipeDetail: { id: string };
+  PrivacyPolicy: undefined;
+  Terms: undefined;
 };
 
 export default function RootNavigator() {
@@ -251,6 +255,8 @@ export default function RootNavigator() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="Tabs" component={MainTabs} />
       <Stack.Screen name="RecipeDetail" component={RecipeDetailScreen} />
+      <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
+      <Stack.Screen name="Terms" component={TermsScreen} />
     </Stack.Navigator>
   );
 }

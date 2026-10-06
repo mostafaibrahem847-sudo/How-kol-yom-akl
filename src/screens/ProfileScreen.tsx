@@ -7,6 +7,7 @@ import { colors, spacing, radius, typography } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
 import AuthPrimaryButton from '../components/AuthPrimaryButton';
+import LegalConsentLine from '../components/LegalConsentLine';
 
 export default function ProfileScreen() {
   const { isLoaded: authLoaded, isSignedIn, signOut } = useAuth();
@@ -93,6 +94,7 @@ export default function ProfileScreen() {
                   />
                 </View>
               </View>
+              <LegalConsentLine />
             </View>
           )}
         </View>

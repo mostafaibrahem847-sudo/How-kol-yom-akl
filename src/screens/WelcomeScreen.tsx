@@ -19,6 +19,7 @@ import {
   DESIGN_REFERENCE,
 } from '../theme';
 import { t } from '../i18n/strings';
+import LegalConsentLine from '../components/LegalConsentLine';
 
 type MciName = keyof typeof MaterialCommunityIcons.glyphMap;
 
@@ -519,6 +520,8 @@ export default function WelcomeScreen() {
                 <Text style={styles.loginActionText}>{t.welcome.loginAction}</Text>
               </Pressable>
             </View>
+
+            <LegalConsentLine />
           </View>
 
           <Text style={[styles.blessing, { marginTop: 16 * vSpacing }]}>{t.welcome.blessing}</Text>
