@@ -194,7 +194,7 @@ export default function RecipeDetailScreen() {
     if (!recipe) return;
     try {
       await Share.share({
-        message: `${recipe.title}\n${recipe.description}\n#هو_كل_يوم_أكل`,
+        message: `${recipe.title}\n${recipe.description}\n${t.profile.hashtag}`,
         title: recipe.title,
       });
     } catch {}

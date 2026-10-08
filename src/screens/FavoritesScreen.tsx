@@ -80,10 +80,10 @@ export default function FavoritesScreen() {
         ) : isLoading ? (
           <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
         ) : isError ? (
-          <Text style={styles.emptyBody}>حدث خطأ في تحميل الوصفات</Text>
+          <Text style={styles.emptyBody}>{t.common.loadError}</Text>
         ) : (
           <>
-            <Text style={styles.resultsCount}>{`${count} وصفة مفضلة`}</Text>
+            <Text style={styles.resultsCount}>{t.favorites.countLabel(count)}</Text>
             <View style={styles.grid}>
               {favRecipes.map((r) => (
                 <View key={r.id} style={styles.cardWrapper}>
