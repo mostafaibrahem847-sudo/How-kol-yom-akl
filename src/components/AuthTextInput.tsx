@@ -30,7 +30,7 @@ export default function AuthTextInput({
   textContentType,
   onSubmitEditing,
   returnKeyType,
-  align = 'right',
+  align = 'left',
 }: AuthTextInputProps) {
   const [focused, setFocused] = useState(false);
 
@@ -59,7 +59,7 @@ export default function AuthTextInput({
 
 const styles = StyleSheet.create({
   field: { gap: spacing.xs },
-  label: { ...typography.label, color: colors.neutralMid, textAlign: 'right' },
+  label: { ...typography.label, color: colors.neutralMid, textAlign: 'left' },
   input: {
     minHeight: 52,
     borderRadius: radius.input,

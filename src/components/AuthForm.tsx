@@ -138,7 +138,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
             keyboardType="email-address"
             autoComplete="email"
             textContentType="emailAddress"
-            align="left"
+            align="right"
             returnKeyType="next"
           />
           <AuthTextInput
@@ -151,7 +151,7 @@ export default function AuthForm({ mode, onSubmit }: AuthFormProps) {
             textContentType={isSignUp ? 'newPassword' : 'password'}
             onSubmitEditing={handleSubmit}
             returnKeyType="go"
-            align="left"
+            align="right"
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
