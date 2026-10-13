@@ -65,7 +65,9 @@ export const useRecipes = () =>
         .limit(RECIPES_LIST_LIMIT);
 
       if (error) {
-        console.error('Supabase recipes error:', error);
+        if (__DEV__) {
+          console.error('Supabase recipes error:', error);
+        }
         throw error;
       }
 
@@ -166,7 +168,9 @@ export async function searchRecipes(query: string, category?: string | null): Pr
     // Category-only filter: one bounded server-side query.
     const { data, error } = await searchQuery();
     if (error) {
-      console.error('Supabase category filter error:', error);
+      if (__DEV__) {
+        console.error('Supabase category filter error:', error);
+      }
       throw error;
     }
     const recipes = (data ?? []).map(mapRecipe);
@@ -182,7 +186,9 @@ export async function searchRecipes(query: string, category?: string | null): Pr
 
   for (const res of [byTitle, byDescription, byCategory]) {
     if (res.error) {
-      console.error('Supabase search error:', res.error);
+      if (__DEV__) {
+        console.error('Supabase search error:', res.error);
+      }
       throw res.error;
     }
   }
@@ -240,7 +246,9 @@ export const useRecipeCategories = () =>
         .limit(RECIPES_LIST_LIMIT);
 
       if (error) {
-        console.error('Supabase categories error:', error);
+        if (__DEV__) {
+          console.error('Supabase categories error:', error);
+        }
         throw error;
       }
 
