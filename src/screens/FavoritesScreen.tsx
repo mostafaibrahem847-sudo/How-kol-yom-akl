@@ -42,23 +42,6 @@ export default function FavoritesScreen() {
           </View>
           <Text style={styles.title}>{t.favorites.title}</Text>
           <Text style={styles.subtitle}>{t.favorites.subtitle}</Text>
-          {isSignedIn ? (
-            <View style={styles.pillRow}>
-              <TouchableOpacity style={[styles.pill, styles.pillActive]} hitSlop={{ top: 4, bottom: 4 }}>
-                <Text style={[styles.pillText, styles.pillTextActive]}>{t.favorites.filters.all}</Text>
-                <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count}</Text></View>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-                <Text style={styles.pillText}>{t.favorites.filters.tried}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-                <Text style={styles.pillText}>{t.favorites.filters.wantToTry}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-                <Text style={styles.pillText}>{t.favorites.filters.eidSweets}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
         </View>
 
         {!authLoaded ? (
@@ -149,13 +132,6 @@ const styles = StyleSheet.create({
   favoriteBadgeText: { ...typography.labelSm, fontWeight: '700', color: colors.primary },
   title: { ...typography.headlineSm, fontWeight: '700', color: colors.neutralDark, marginBottom: spacing.sm },
   subtitle: { ...typography.bodyMedium, fontWeight: '500', color: colors.neutralMid, marginBottom: spacing.md, lineHeight: 24 },
-  pillRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md, flexWrap: 'wrap' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 9999, backgroundColor: colors.neutralSurface },
-  pillActive: { backgroundColor: colors.primary },
-  pillCountBadge: { backgroundColor: colors.primaryDark, borderRadius: 9999, paddingHorizontal: spacing.xs, paddingVertical: 2, minWidth: 18, alignItems: 'center', justifyContent: 'center' },
-  pillCountText: { ...typography.labelSm, color: colors.white, fontWeight: '700' },
-  pillText: { ...typography.buttonLarge, color: colors.neutralDark },
-  pillTextActive: { color: colors.white },
   emptySection: { alignItems: 'center', gap: spacing.md },
   emptyTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: spacing.md },
   emptyTopLabel: { ...typography.label, color: colors.neutralMid, fontWeight: '600' },

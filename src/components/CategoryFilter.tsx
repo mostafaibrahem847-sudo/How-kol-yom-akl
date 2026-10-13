@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   chipText: { ...typography.label, color: colors.neutralMid },
   // Selected chip: same shape, primary fill — mirrors the app's existing
-  // active-pill language (FavoritesScreen pillActive).
+  // active-pill language.
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   chipTextActive: { color: colors.white },
 });
