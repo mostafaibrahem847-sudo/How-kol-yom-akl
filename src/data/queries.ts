@@ -39,10 +39,9 @@ const assertCatalogIds = (recipes: Recipe[]) => {
 
 // ─── Recipes list ──────────────────────────────────────────────────────────────
 
-// Upper bound for the list query. The catalog is ~10 rows today and targets
-// 50–100; a plain limit keeps the query bounded without inventing pagination
-// (Phase 9 owns broader list performance work).
-const RECIPES_LIST_LIMIT = 100;
+// Safety cap, not a real pagination limit: the live catalog is at 100 recipes
+// today. Add proper pagination before the catalog approaches this number.
+const RECIPES_LIST_LIMIT = 500;
 
 // Recipes whose ingredients/steps are not authored yet would open an empty
 // details screen. The embedded `!inner` join drops any recipe with zero
