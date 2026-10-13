@@ -44,8 +44,11 @@ Stable facts about this repo. Read this first before changing anything.
 
 ## Recipe catalog
 
-- 50 recipes. Ids are lowercase slugs with hyphens (e.g. `shrimp-scampi`).
+- 100 recipes. Ids are lowercase slugs with hyphens (e.g. `shrimp-scampi`).
 - Source of truth is the live DB; ids also listed in `src/db/seed-recipe-md.sql`.
+- The recipe list query has a safety cap (`RECIPES_LIST_LIMIT = 500` in
+  `src/data/queries.ts`) with no real pagination yet; revisit if the catalog
+  grows well beyond it.
 
 ## Rules for future changes
 
@@ -55,6 +58,9 @@ Stable facts about this repo. Read this first before changing anything.
 
 ## Known open items
 
-- About 20 recipes still have no narration audio.
+- 30 of 100 recipes have narration audio; 70 still need it.
 - `shrimp-scampi` has no image.
 - The featured hero picks a random recipe each app launch.
+- GitHub issue #1: favorites button works without sign-in (should require auth) — open.
+- 4 `console.error` calls in `src/data/queries.ts` (lines 68, 169, 185, 243) are
+  not gated behind `__DEV__`.
