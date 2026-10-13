@@ -14,6 +14,7 @@ import { Recipe } from '../types/recipe';
 import { cardImageUrl } from '../lib/imageUrl';
 import { t } from '../i18n/strings';
 import { useFavorites } from '../state/favorites';
+import { useAuth } from '@clerk/expo';
 
 // Shared image block for the list and grid cards: the full-bleed image (or the
 // letter-fallback placeholder), the faint warm tint, the favorite heart and the
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export default function RecipeCardMedia({ recipe, style }: Props) {
+  const { isSignedIn } = useAuth();
   const isFavorite = useFavorites((s) => s.favorites.has(recipe.id));
   const toggleFavorite = useFavorites((s) => s.toggle);
 
@@ -41,19 +43,21 @@ export default function RecipeCardMedia({ recipe, style }: Props) {
       {/* Faint warm tint for legibility over the photo */}
       <View style={styles.overlay} pointerEvents="none" />
 
-      <TouchableOpacity
-        style={styles.favBtn}
-        onPress={() => toggleFavorite(recipe.id)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel={isFavorite ? t.recipeDetail.favoriteRemove : t.recipeDetail.favoriteAdd}
-      >
-        <MaterialCommunityIcons
-          name={isFavorite ? 'heart' : 'heart-outline'}
-          size={17}
-          color={colors.primary}
-        />
-      </TouchableOpacity>
+      {isSignedIn ? (
+        <TouchableOpacity
+          style={styles.favBtn}
+          onPress={() => toggleFavorite(recipe.id)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={isFavorite ? t.recipeDetail.favoriteRemove : t.recipeDetail.favoriteAdd}
+        >
+          <MaterialCommunityIcons
+            name={isFavorite ? 'heart' : 'heart-outline'}
+            size={17}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
+      ) : null}
 
       {recipe.audioAvailable && (
         <View style={styles.audioBadge} pointerEvents="none">

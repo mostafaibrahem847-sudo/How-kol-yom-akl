@@ -109,6 +109,9 @@ export const t = {
     emptyCta: 'اكتشف وصفات النهاردة 🍲',
     emptyHint: 'لو القائمة فضيت في أي وقت؟',
     emptyHintTag: 'معلومة سريعة',
+    signInRequiredTitle: 'لازم تسجّل دخولك',
+    signInRequiredBody: 'عشان تضيف وصفات للمفضلة وتشوفها هنا، سجّل دخولك الأول.',
+    signInRequiredCta: 'تسجيل الدخول',
   },
   profile: {
     hashtag: '#هو_كل_يوم_أكل',

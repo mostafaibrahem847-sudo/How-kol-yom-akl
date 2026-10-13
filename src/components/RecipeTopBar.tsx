@@ -6,6 +6,7 @@ import { colors, spacing } from '../theme';
 import { t } from '../i18n/strings';
 import GlassIconButton from './GlassIconButton';
 import { headerBar } from './recipeDetailSharedStyles';
+import { useAuth } from '@clerk/expo';
 
 type Props = {
   isFav: boolean;
@@ -15,6 +16,7 @@ type Props = {
 };
 
 export default function RecipeTopBar({ isFav, onBack, onToggleFavorite, onShare }: Props) {
+  const { isSignedIn } = useAuth();
   return (
     <View style={headerBar} pointerEvents="box-none">
       <GlassIconButton
@@ -25,19 +27,21 @@ export default function RecipeTopBar({ isFav, onBack, onToggleFavorite, onShare 
       </GlassIconButton>
 
       <View style={styles.headerActions}>
-        <GlassIconButton
-          onPress={onToggleFavorite}
-          accessibilityLabel={
-            isFav ? t.recipeDetail.favoriteRemove : t.recipeDetail.favoriteAdd
-          }
-          accessibilityState={{ selected: isFav }}
-        >
-          <MaterialCommunityIcons
-            name={isFav ? 'heart' : 'heart-outline'}
-            size={20}
-            color={colors.primary}
-          />
-        </GlassIconButton>
+        {isSignedIn ? (
+          <GlassIconButton
+            onPress={onToggleFavorite}
+            accessibilityLabel={
+              isFav ? t.recipeDetail.favoriteRemove : t.recipeDetail.favoriteAdd
+            }
+            accessibilityState={{ selected: isFav }}
+          >
+            <MaterialCommunityIcons
+              name={isFav ? 'heart' : 'heart-outline'}
+              size={20}
+              color={colors.primary}
+            />
+          </GlassIconButton>
+        ) : null}
 
         <GlassIconButton
           onPress={onShare}

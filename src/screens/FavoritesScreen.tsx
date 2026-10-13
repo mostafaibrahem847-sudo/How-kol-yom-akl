@@ -8,9 +8,11 @@ import { useRecipes } from '../data/queries';
 import RecipeCardList from '../components/RecipeCardList';
 import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '@clerk/expo';
 
 export default function FavoritesScreen() {
   const navigation = useNavigation<any>();
+  const { isLoaded: authLoaded, isSignedIn } = useAuth();
   const { favorites, hydrated, pruneStale } = useFavorites();
   const count = favorites.size;
 
@@ -40,24 +42,43 @@ export default function FavoritesScreen() {
           </View>
           <Text style={styles.title}>{t.favorites.title}</Text>
           <Text style={styles.subtitle}>{t.favorites.subtitle}</Text>
-          <View style={styles.pillRow}>
-            <TouchableOpacity style={[styles.pill, styles.pillActive]} hitSlop={{ top: 4, bottom: 4 }}>
-              <Text style={[styles.pillText, styles.pillTextActive]}>{t.favorites.filters.all}</Text>
-              <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count}</Text></View>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-              <Text style={styles.pillText}>{t.favorites.filters.tried}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-              <Text style={styles.pillText}>{t.favorites.filters.wantToTry}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
-              <Text style={styles.pillText}>{t.favorites.filters.eidSweets}</Text>
-            </TouchableOpacity>
-          </View>
+          {isSignedIn ? (
+            <View style={styles.pillRow}>
+              <TouchableOpacity style={[styles.pill, styles.pillActive]} hitSlop={{ top: 4, bottom: 4 }}>
+                <Text style={[styles.pillText, styles.pillTextActive]}>{t.favorites.filters.all}</Text>
+                <View style={styles.pillCountBadge}><Text style={styles.pillCountText}>{count}</Text></View>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
+                <Text style={styles.pillText}>{t.favorites.filters.tried}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
+                <Text style={styles.pillText}>{t.favorites.filters.wantToTry}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.pill} hitSlop={{ top: 4, bottom: 4 }}>
+                <Text style={styles.pillText}>{t.favorites.filters.eidSweets}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
 
-        {count === 0 ? (
+        {!authLoaded ? (
+          <ActivityIndicator color={colors.primary} size="large" style={{ marginVertical: spacing.xl }} />
+        ) : !isSignedIn ? (
+          <View style={styles.emptySection}>
+            <View style={styles.emptyCard}>
+              <View style={styles.illustration}>
+                <Text style={styles.illustrationIcon}>🔒</Text>
+              </View>
+              <View style={styles.emptyContent}>
+                <Text style={styles.emptyTitle}>{t.favorites.signInRequiredTitle}</Text>
+                <Text style={styles.emptyBody}>{t.favorites.signInRequiredBody}</Text>
+              </View>
+              <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85} onPress={() => navigation.navigate('SignIn')}>
+                <Text style={styles.ctaText}>{t.favorites.signInRequiredCta}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : count === 0 ? (
           <View style={styles.emptySection}>
             <View style={styles.emptyTopRow}>
               <Text style={styles.emptyTopLabel}>{t.favorites.emptyHint}</Text>

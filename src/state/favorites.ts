@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const STORAGE_KEY = 'howa-kol-yom-akl.favorites.v1';
+const STORAGE_KEY = 'howa-kol-yom-akl.favorites.v2';
 
 // Wrap AsyncStorage so a failed write/remove is logged (dev only) and swallowed
 // instead of surfacing as an unhandled rejection. The in-memory Set is the
