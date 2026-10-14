@@ -39,10 +39,13 @@ export const t = {
   home: {
     greeting: 'صباح الفل! 🍲',
     subtitle: 'نطبخ إيه النهاردة؟ احنا معاك في المطبخ خطوة بخطوة بالصوت والراحة.',
+    browseCuisine: 'تصفح حسب المطبخ',
     feedHeader: 'وصفات متجربة ومضمونة',
     feedSubheader: 'على أصولها وبطعم البيوت المصرية',
     empty: 'لسه مفيش وصفات هنا',
     emptyBody: 'جرّب تحديث الصفحة بعد شوية.',
+    cuisineEmpty: 'مفيش وصفات في المطبخ ده لسه',
+    cuisineEmptyBody: 'جرّب مطبخ تاني من فوق، أو ارجع لكل الوصفات.',
   },
   search: {
     filters: {

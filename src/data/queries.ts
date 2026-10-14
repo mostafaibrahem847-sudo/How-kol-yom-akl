@@ -77,6 +77,37 @@ export const useRecipes = () =>
     },
   });
 
+// ─── Recipes filtered by cuisine ────────────────────────────────────────────────
+
+// Same bounded list shape as useRecipes(), narrowed server-side to one cuisine
+// value. Disabled while no cuisine is selected, so the idle Home screen keeps
+// serving the shared ['recipes'] catalog cache with no extra request.
+export const useRecipesByCuisine = (cuisine: string | null) =>
+  useQuery<Recipe[]>({
+    queryKey: ['recipes', 'cuisine', cuisine ?? 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('recipes')
+        .select(RECIPE_LIST_COLUMNS)
+        .eq('cuisine', cuisine)
+        .order('sort_order', { ascending: true })
+        .order('id', { ascending: true })
+        .limit(RECIPES_LIST_LIMIT);
+
+      if (error) {
+        if (__DEV__) {
+          console.error('Supabase cuisine filter error:', error);
+        }
+        throw error;
+      }
+
+      const recipes = (data ?? []).map(mapRecipe);
+      assertCatalogIds(recipes);
+      return recipes;
+    },
+    enabled: cuisine !== null,
+  });
+
 // ─── Recipe detail ─────────────────────────────────────────────────────────────
 
 export const useRecipe = (id: string) =>

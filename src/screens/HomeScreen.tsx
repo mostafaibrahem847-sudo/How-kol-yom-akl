@@ -4,12 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
 import { screenPadding } from '../theme/spacing';
 import { t } from '../i18n/strings';
-import { useRecipes, useRecipeCategories, useRecipeSearch } from '../data/queries';
+import { useRecipes, useRecipesByCuisine } from '../data/queries';
 import RecipeCard from '../components/RecipeCard';
 import RecipeCardList from '../components/RecipeCardList';
 import RecipeCardGrid from '../components/RecipeCardGrid';
 import RecipeViewToggle from '../components/RecipeViewToggle';
-import CategoryFilter from '../components/CategoryFilter';
+import CuisineRow from '../components/CuisineRow';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 import { hasRealPhoto } from '../lib/images';
@@ -23,17 +23,16 @@ import {
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const mode = useViewMode((s) => s.mode);
 
-  // No category = the shared cached catalog Home always used. A selected chip
-  // switches to the same server-side category query Search uses, so the filter
-  // is real data, not a decorative row.
+  // No cuisine = the shared cached catalog Home always used. Selecting a
+  // cuisine card switches to a real server-side `cuisine = ...` query, so the
+  // filter is data-backed, not a decorative row.
   const catalogQuery = useRecipes();
-  const categoriesQuery = useRecipeCategories();
-  const isFiltering = selectedCategory !== null;
-  const searchQuery = useRecipeSearch('', selectedCategory, { enabled: isFiltering });
-  const activeQuery = isFiltering ? searchQuery : catalogQuery;
+  const isFiltering = selectedCuisine !== null;
+  const cuisineQuery = useRecipesByCuisine(selectedCuisine);
+  const activeQuery = isFiltering ? cuisineQuery : catalogQuery;
   const { data, isLoading, isError, refetch } = activeQuery;
   const list = data ?? [];
 
@@ -83,7 +82,7 @@ export default function HomeScreen() {
     [catalogList, heroId],
   );
 
-  // While a category is active the hero is hidden so the filtered results read
+  // While a cuisine is active the hero is hidden so the filtered results read
   // unambiguously.
   const showHero = !isFiltering;
 
@@ -103,7 +102,7 @@ export default function HomeScreen() {
           <Text style={styles.subtitle}>{t.home.subtitle}</Text>
         </View>
 
-        {/* Hero Card (hidden while a category filter is active) */}
+        {/* Hero Card (hidden while a cuisine filter is active) */}
         {showHero && heroRecipe && (
           <View style={styles.heroWrapper}>
             <RecipeCard
@@ -113,13 +112,9 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Category filter (shared with Search) */}
-        <CategoryFilter
-          categories={categoriesQuery.data ?? []}
-          selected={selectedCategory}
-          onSelect={setSelectedCategory}
-          allLabel={t.search.filters.all}
-        />
+        {/* Browse by cuisine (replaces the old category chip filter) */}
+        <Text style={styles.sectionHeader}>{t.home.browseCuisine}</Text>
+        <CuisineRow selectedCuisine={selectedCuisine} onSelectCuisine={setSelectedCuisine} />
 
         {/* Feed heading with the view switcher on the physical left */}
         <View style={styles.feedHeaderRow}>
@@ -141,8 +136,8 @@ export default function HomeScreen() {
           </View>
         ) : list.length === 0 ? (
           <View style={{ alignItems: 'center', marginVertical: spacing.xl }}>
-            <Text style={styles.feedHeader}>{t.home.empty}</Text>
-            <Text style={styles.feedSub}>{t.home.emptyBody}</Text>
+            <Text style={styles.feedHeader}>{isFiltering ? t.home.cuisineEmpty : t.home.empty}</Text>
+            <Text style={styles.feedSub}>{isFiltering ? t.home.cuisineEmptyBody : t.home.emptyBody}</Text>
           </View>
         ) : (
           <View style={styles.feedGrid}>
@@ -188,6 +183,7 @@ const styles = StyleSheet.create({
   greetingText: { ...typography.h1, color: colors.neutralDark, marginBottom: spacing.sm },
   subtitle: { ...typography.bodyLarge, color: colors.neutralMid },
   heroWrapper: { marginBottom: spacing.xl, alignItems: 'center' },
+  sectionHeader: { ...typography.h2, color: colors.neutralDark, marginBottom: spacing.sm },
   filterChip: {
     backgroundColor: colors.neutralSurface,
     paddingHorizontal: spacing.md,
