@@ -16,7 +16,7 @@ type Props = {
   onPress: () => void;
 };
 
-export default function RecipeCardList({ recipe, onPress }: Props) {
+function RecipeCardList({ recipe, onPress }: Props) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -97,3 +97,5 @@ const styles = StyleSheet.create({
   },
   spacer: { flex: 1, minHeight: 6 },
 });
+
+export default React.memo(RecipeCardList);

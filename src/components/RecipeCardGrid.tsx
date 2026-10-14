@@ -16,7 +16,7 @@ type Props = {
 // Vertical card for the two-column grid: image on top, then the category
 // badge, the title (capped at two lines) and the meta line. Shares its props
 // and all media/favorite logic with RecipeCardList.
-export default function RecipeCardGrid({ recipe, onPress }: Props) {
+function RecipeCardGrid({ recipe, onPress }: Props) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.85} style={styles.card}>
       <RecipeCardMedia recipe={recipe} style={styles.media} />
@@ -78,3 +78,5 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
 });
+
+export default React.memo(RecipeCardGrid);
