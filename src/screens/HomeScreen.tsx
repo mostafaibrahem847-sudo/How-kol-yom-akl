@@ -12,63 +12,92 @@ import CuisineRow from '../components/CuisineRow';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 
-// Feed cross-fade on view-mode change: 90ms out + 110ms in = 200ms total.
-const FADE_OUT_MS = 90;
-const FADE_IN_MS = 110;
+// Feed "settle" on view-mode change: shrink/dim over 140ms, then grow/restore
+// over 160ms (300ms total). Opacity never reaches 0 so content stays faintly
+// visible while the layout swaps, reading as a settle instead of a flash.
+const SETTLE_OUT_MS = 140;
+const SETTLE_IN_MS = 160;
+const SETTLE_OPACITY = 0.55;
+const SETTLE_SCALE = 0.96;
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const mode = useViewMode((s) => s.mode);
 
-  // Deferred copy of `mode`: the FlatList swaps to it at the fade midpoint, so
-  // the old layout fades out before the new one appears. The ref lets the
-  // effect read the current value without re-running on its own setState.
+  // Deferred copy of `mode`: the FlatList swaps to it at the settle midpoint, so
+  // the old layout dims/shrinks out before the new one grows in. The ref lets
+  // the effect read the current value without re-running on its own setState.
   const [displayMode, setDisplayMode] = useState(mode);
   const displayModeRef = useRef(displayMode);
   const opacity = useRef(new Animated.Value(1)).current;
+  const scale = useRef(new Animated.Value(1)).current;
   const fadeRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
-    // Reverted (rapid re-toggle) or already current: recover to fully visible
-    // so a cancelled fade can never strand the feed at opacity 0.
+    // Reverted (rapid re-toggle) or already current: settle opacity AND scale
+    // back so a cancelled transition can never strand the feed dimmed/shrunk.
     if (mode === displayModeRef.current) {
       fadeRef.current?.stop();
-      const restore = Animated.timing(opacity, {
-        toValue: 1,
-        duration: FADE_IN_MS,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      });
+      const restore = Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: SETTLE_IN_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: SETTLE_IN_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]);
       fadeRef.current = restore;
       restore.start();
       return;
     }
     fadeRef.current?.stop();
-    const out = Animated.timing(opacity, {
-      toValue: 0,
-      duration: FADE_OUT_MS,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    });
+    const out = Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: SETTLE_OPACITY,
+        duration: SETTLE_OUT_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: SETTLE_SCALE,
+        duration: SETTLE_OUT_MS,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
     fadeRef.current = out;
     out.start(({ finished }) => {
-      if (!finished) return; // superseded; the newer effect owns opacity now
+      if (!finished) return; // superseded; the newer effect owns the values now
       displayModeRef.current = mode;
       setDisplayMode(mode);
-      const inn = Animated.timing(opacity, {
-        toValue: 1,
-        duration: FADE_IN_MS,
-        easing: Easing.in(Easing.quad),
-        useNativeDriver: true,
-      });
+      const inn = Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: SETTLE_IN_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: SETTLE_IN_MS,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]);
       fadeRef.current = inn;
       inn.start();
     });
-    // Only a real mode change re-runs this; cleanup stops the fade on unmount
-    // or hands off to the next toggle.
+    // Only a real mode change re-runs this; cleanup stops both opacity and
+    // scale on unmount or hands them off to the next toggle.
     return () => fadeRef.current?.stop();
-  }, [mode, opacity]);
+  }, [mode, opacity, scale]);
 
   // No cuisine = the shared cached catalog Home always used. Selecting a
   // cuisine card switches to a real server-side `cuisine = ...` query, so the
@@ -125,9 +154,9 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Cross-fade wraps only the scrolling feed. numColumns cannot change in
-          place, so the FlatList swaps to `displayMode` at the fade midpoint. */}
-      <Animated.View style={[styles.feedWrap, { opacity }]}>
+      {/* Scale + fade wraps only the scrolling feed. numColumns cannot change
+          in place, so the FlatList swaps to `displayMode` at the settle midpoint. */}
+      <Animated.View style={[styles.feedWrap, { opacity, transform: [{ scale }] }]}>
         <FlatList
           key={displayMode}
           data={feedData}
