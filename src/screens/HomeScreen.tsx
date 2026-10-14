@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Animated, Easing } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, typography, headerHeight, SINGLE_COLUMN_MAX_WIDTH } from '../theme';
 import { screenPadding } from '../theme/spacing';
@@ -12,10 +12,63 @@ import CuisineRow from '../components/CuisineRow';
 import AppHeader from '../components/AppHeader';
 import { useViewMode } from '../state/viewMode';
 
+// Feed cross-fade on view-mode change: 90ms out + 110ms in = 200ms total.
+const FADE_OUT_MS = 90;
+const FADE_IN_MS = 110;
+
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null);
   const mode = useViewMode((s) => s.mode);
+
+  // Deferred copy of `mode`: the FlatList swaps to it at the fade midpoint, so
+  // the old layout fades out before the new one appears. The ref lets the
+  // effect read the current value without re-running on its own setState.
+  const [displayMode, setDisplayMode] = useState(mode);
+  const displayModeRef = useRef(displayMode);
+  const opacity = useRef(new Animated.Value(1)).current;
+  const fadeRef = useRef<Animated.CompositeAnimation | null>(null);
+
+  useEffect(() => {
+    // Reverted (rapid re-toggle) or already current: recover to fully visible
+    // so a cancelled fade can never strand the feed at opacity 0.
+    if (mode === displayModeRef.current) {
+      fadeRef.current?.stop();
+      const restore = Animated.timing(opacity, {
+        toValue: 1,
+        duration: FADE_IN_MS,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      });
+      fadeRef.current = restore;
+      restore.start();
+      return;
+    }
+    fadeRef.current?.stop();
+    const out = Animated.timing(opacity, {
+      toValue: 0,
+      duration: FADE_OUT_MS,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    fadeRef.current = out;
+    out.start(({ finished }) => {
+      if (!finished) return; // superseded; the newer effect owns opacity now
+      displayModeRef.current = mode;
+      setDisplayMode(mode);
+      const inn = Animated.timing(opacity, {
+        toValue: 1,
+        duration: FADE_IN_MS,
+        easing: Easing.in(Easing.quad),
+        useNativeDriver: true,
+      });
+      fadeRef.current = inn;
+      inn.start();
+    });
+    // Only a real mode change re-runs this; cleanup stops the fade on unmount
+    // or hands off to the next toggle.
+    return () => fadeRef.current?.stop();
+  }, [mode, opacity]);
 
   // No cuisine = the shared cached catalog Home always used. Selecting a
   // cuisine card switches to a real server-side `cuisine = ...` query, so the
@@ -72,37 +125,39 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
-      {/* numColumns cannot change in place, so keying on mode remounts the
-          FlatList (not 100 card subtrees): it only renders near the viewport. */}
-      <FlatList
-        key={mode}
-        data={feedData}
-        keyExtractor={(r) => r.id}
-        numColumns={mode === 'grid' ? 2 : 1}
-        columnWrapperStyle={mode === 'grid' ? styles.columnWrapper : undefined}
-        renderItem={({ item: r }) => (
-          <View style={mode === 'grid' ? styles.cardWrapperGrid : styles.cardWrapperFull}>
-            {mode === 'grid' ? (
-              <RecipeCardGrid
-                recipe={r}
-                onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-              />
-            ) : (
-              <RecipeCardList
-                recipe={r}
-                onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
-              />
-            )}
-          </View>
-        )}
-        ListHeaderComponent={header}
-        ListEmptyComponent={empty}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        onRefresh={refetch}
-        refreshing={isRefetching}
-      />
+      {/* Cross-fade wraps only the scrolling feed. numColumns cannot change in
+          place, so the FlatList swaps to `displayMode` at the fade midpoint. */}
+      <Animated.View style={[styles.feedWrap, { opacity }]}>
+        <FlatList
+          key={displayMode}
+          data={feedData}
+          keyExtractor={(r) => r.id}
+          numColumns={displayMode === 'grid' ? 2 : 1}
+          columnWrapperStyle={displayMode === 'grid' ? styles.columnWrapper : undefined}
+          renderItem={({ item: r }) => (
+            <View style={displayMode === 'grid' ? styles.cardWrapperGrid : styles.cardWrapperFull}>
+              {displayMode === 'grid' ? (
+                <RecipeCardGrid
+                  recipe={r}
+                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                />
+              ) : (
+                <RecipeCardList
+                  recipe={r}
+                  onPress={() => navigation.navigate('RecipeDetail', { id: r.id })}
+                />
+              )}
+            </View>
+          )}
+          ListHeaderComponent={header}
+          ListEmptyComponent={empty}
+          style={styles.scrollView}
+          contentContainerStyle={styles.scroll}
+          showsVerticalScrollIndicator={false}
+          onRefresh={refetch}
+          refreshing={isRefetching}
+        />
+      </Animated.View>
 
       {/* Fixed top header overlay */}
       <View style={styles.fixedHeader}>
@@ -114,6 +169,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.secondary },
+  feedWrap: { flex: 1 },
   scrollView: { flex: 1 },
   scroll: {
     paddingHorizontal: screenPadding.horizontal,
